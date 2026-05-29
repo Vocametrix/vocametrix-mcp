@@ -80,23 +80,28 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
   server.tool(
     "vocametrix_classify_stuttering",
     "Classify stuttering disfluency patterns in a speech recording (async, ~30–120 seconds). " +
-    "Returns disfluency types (repetitions, prolongations, blocks), severity score, and fluency rate. " +
+    "Returns per-block disfluency types (repetitions, prolongations, blocks) with time ranges, an overall " +
+    "severity, and (when transcribe=true, the default) a transcription plus per-word timestamps per block. " +
     "The tool polls the result automatically — no separate status call needed. " +
     "BEFORE CALLING: Confirm the user has a natural connected speech recording " +
     "(the patient speaking spontaneously or reading aloud). " +
     "A sustained vowel is not appropriate here — the recording must contain running speech.",
     {
       audioPath: audioPath,
+      transcribe: z.boolean().default(true)
+        .describe("Transcribe the recording (default true) — adds a `transcription` and per-word `words` timestamps to each block. Set false for minimum latency (classification only)."),
+      includePhonemes: z.boolean().default(false)
+        .describe("Include per-block phonetic transcription (default false; slower — loads a dedicated phoneme model)."),
       pollIntervalMs: z.number().int().min(1000).max(30000).default(5000)
         .describe("Polling interval in ms while waiting for result (default 5000)"),
       timeoutMs: z.number().int().min(10000).max(900000).default(620000)
         .describe("Maximum wait time in ms before giving up (default 620000 = ~10 min)"),
     },
     READONLY_TOOL,
-    async ({ audioPath: path, pollIntervalMs, timeoutMs }) => {
+    async ({ audioPath: path, transcribe, includePhonemes, pollIntervalMs, timeoutMs }) => {
       try {
         const fileId = await client.uploadFileId(path);
-        const startResult = await client.post("/api/classify-stuttering", { fileId }) as { session_id: string };
+        const startResult = await client.post("/api/classify-stuttering", { fileId, transcribe, includePhonemes }) as { session_id: string };
         const sessionId = startResult.session_id;
 
         const deadline = Date.now() + timeoutMs;
@@ -104,7 +109,7 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
           await new Promise(r => setTimeout(r, pollIntervalMs));
           const status = await client.get(`/api/therapy-status/${sessionId}`) as Record<string, unknown>;
           const state = String(status["status"] ?? status["state"] ?? "");
-          if (["completed", "succeeded", "done"].includes(state)) break;
+          if (state === "complete" || status["result_available"]) break;
           if (["failed", "error"].includes(state)) {
             return { content: [{ type: "text" as const, text: `Classification failed: ${JSON.stringify(status)}` }], isError: true as const };
           }
