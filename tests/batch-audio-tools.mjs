@@ -7,11 +7,12 @@
 // Run:
 //   node tests/batch-audio-tools.mjs [--url <mcp-url>] [--wav <path>] [--timeout-ms 240000]
 
+import { remoteAuthHeaders } from './remote-auth.mjs';
 import { readFileSync, statSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 
 const DEFAULTS = {
-  url: "https://independent-happiness-production-75b7.up.railway.app/mcp?key=vcmx_661747c95ecb6d0da1b3ff9fe708a9e7fa503a6657842243aedea472d94a8975",
+  url: "https://independent-happiness-production-75b7.up.railway.app/mcp",
   wav: "D:\\Github\\aphasix-model-fine-tuning\\data\\phase3_short_words\\713 Batch de 25\\batch_ABEILLE\\wavs\\abeille___2025-11-20___001.wav",
   timeoutMs: 240000,
 };
@@ -40,7 +41,7 @@ async function rpc(method, params, perCallTimeoutMs) {
   try {
     resp = await fetch(args.url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream" },
+      headers: { ...remoteAuthHeaders(), "Content-Type": "application/json", "Accept": "application/json, text/event-stream" },
       body, signal: ctrl.signal,
     });
   } catch (e) {

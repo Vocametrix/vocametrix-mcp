@@ -5,10 +5,11 @@
 // Run:
 //   node tests/blob-lifetime-probe.mjs [--url <mcp-url>] [--wav <path>]
 
+import { remoteAuthHeaders } from './remote-auth.mjs';
 import { readFileSync } from "node:fs";
 
 const ARGS = {
-  url: "https://independent-happiness-production-75b7.up.railway.app/mcp?key=vcmx_661747c95ecb6d0da1b3ff9fe708a9e7fa503a6657842243aedea472d94a8975",
+  url: "https://independent-happiness-production-75b7.up.railway.app/mcp",
   wav: "D:\\Github\\aphasix-model-fine-tuning\\data\\phase3_short_words\\713 Batch de 25\\batch_ABEILLE\\wavs\\abeille___2025-11-20___001.wav",
 };
 for (let i = 0; i < process.argv.length - 2; i++) {
@@ -22,7 +23,7 @@ async function rpc(method, params) {
   const id = ++rpcId;
   const resp = await fetch(ARGS.url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream" },
+    headers: { ...remoteAuthHeaders(), "Content-Type": "application/json", "Accept": "application/json, text/event-stream" },
     body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
   });
   const ctype = resp.headers.get("content-type") ?? "";

@@ -160,7 +160,7 @@ const API_DOCS = `# Vocametrix API — Quick Reference
 All requests require: X-API-Key: your-api-key
 
 Get an API key: https://www.vocametrix.com/registration
-Free trial: 5 minutes of analysis or 5 API credits
+API calls require purchased API credits. The website subscription and trial do not cover API usage.
 
 ## Base URL
 https://platform.vocametrix.com

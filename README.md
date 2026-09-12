@@ -26,7 +26,13 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
-Get an API key at [vocametrix.com/registration](https://www.vocametrix.com/registration). Free trial: 5 minutes of analysis.
+Get an API key at [vocametrix.com/registration](https://www.vocametrix.com/registration). MCP analysis uses purchased API credits; the website subscription and trial do not cover API calls.
+
+### ChatGPT (OAuth, API credits)
+
+The optional `/chatgpt/mcp` endpoint links a user's API account through OAuth. The user approves access on the platform's consent page; ChatGPT receives revocable tokens, not the API key. Existing `/mcp` API-key clients and local stdio clients remain supported.
+
+See [ChatGPT setup and release checks](docs/chatgpt-api.md) for the matching platform changes, database migration, configuration, and tests. This integration must be deployed and tested in ChatGPT before public submission.
 
 ## Tools
 

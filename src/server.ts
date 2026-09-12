@@ -9,6 +9,7 @@ import { registerAllTools } from "./tools/index.js";
 import { registerResources } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
 import { runSetup } from "./setup.js";
+import { CHATGPT_PATH, OAuthError, authenticationChallenge, protectedResourceMetadata, readOAuthConfig, resolveOAuthApiKey } from "./oauth.js";
 
 const cliArgs = process.argv.slice(2);
 if (cliArgs.includes("--setup")) {
@@ -46,11 +47,12 @@ function extractKeyFromUrl(url: string | undefined): string | undefined {
   return new URLSearchParams(url.slice(q + 1)).get("key") ?? undefined;
 }
 
-async function handleMcpRequest(req: IncomingMessage, res: ServerResponse) {
-  const apiKey = (req.headers["x-api-key"] as string | undefined) ?? extractKeyFromUrl(req.url);
+async function handleMcpRequest(req: IncomingMessage, res: ServerResponse, oauthApiKey?: string) {
+  const apiKey = oauthApiKey ?? (req.headers["x-api-key"] as string | undefined) ?? extractKeyFromUrl(req.url);
   let client: ReturnType<typeof createClient>;
   try {
-    client = createClient(apiKey);
+    // Anonymous HTTP discovery must never inherit the stdio owner's credentials.
+    client = apiKey ? createClient(apiKey) : createDummyClient();
   } catch {
     client = createDummyClient();
   }
@@ -58,6 +60,7 @@ async function handleMcpRequest(req: IncomingMessage, res: ServerResponse) {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   const mcpServer = buildServer(client);
   await mcpServer.connect(transport);
+  res.on("close", () => { void mcpServer.close(); });
 
   const chunks: Buffer[] = [];
   await new Promise<void>((resolve) => {
@@ -76,9 +79,42 @@ async function handleMcpRequest(req: IncomingMessage, res: ServerResponse) {
 const port = process.env.PORT ? parseInt(process.env.PORT) : null;
 
 if (port) {
+  const oauth = readOAuthConfig();
   const httpServer = createServer((req, res) => {
     const url = req.url ?? "";
-    if (url === "/mcp" || url.startsWith("/mcp?")) {
+    const path = url.split("?")[0];
+    if (oauth && (path === "/.well-known/oauth-protected-resource" || path === `/.well-known/oauth-protected-resource${CHATGPT_PATH}`)) {
+      if (req.method !== "GET") {
+        res.writeHead(405, { Allow: "GET" });
+        res.end();
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(protectedResourceMetadata(oauth)));
+      return;
+    }
+    if (path === CHATGPT_PATH && oauth) {
+      res.setHeader("Cache-Control", "no-store");
+      // Credentials for this endpoint come exclusively from OAuth introspection.
+      resolveOAuthApiKey(req.headers.authorization, oauth).then(async (apiKey) => {
+        if (req.method !== "POST") {
+          res.writeHead(405, { Allow: "POST" });
+          res.end();
+          return;
+        }
+        await handleMcpRequest(req, res, apiKey);
+      }).catch((err: unknown) => {
+        if (res.headersSent) { res.end(); return; }
+        const status = err instanceof OAuthError ? err.status : 500;
+        res.writeHead(status, {
+          "Content-Type": "application/json",
+          ...(status === 401 ? { "WWW-Authenticate": authenticationChallenge(oauth) } : {}),
+        });
+        res.end(JSON.stringify({ error: err instanceof OAuthError ? err.message : "Internal server error" }));
+      });
+      return;
+    }
+    if (path === "/mcp") {
       // Stateless mode: we create a fresh McpServer per HTTP request, so the
       // standalone GET SSE notification stream the SDK would open has no producer.
       // Per the MCP spec, returning 405 here tells clients that no server-initiated
