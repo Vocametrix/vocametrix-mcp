@@ -11,8 +11,9 @@ The consent form is hosted by `vocametrix-platform`. No landing-page change is
 needed. The first version uses a predefined confidential OAuth client, rather
 than dynamic client registration.
 
-The production database migration is applied. Production OAuth configuration,
-application rollout, real OAuth/audio checks, and ChatGPT review remain pending.
+The production database migration is applied and the MCP application is deployed.
+Production OAuth configuration, platform application rollout, real OAuth/audio
+checks, and ChatGPT review remain pending.
 Test accounts and service responses are explicitly
 synthetic fixtures, not measured production results.
 
@@ -30,16 +31,28 @@ The platform's last deployment is healthy, and its deployed Git revision matches
 the local base. Its OAuth environment variables are not configured. The MCP
 GitHub deployment points to Railway project `1a04bd7e-4064-4e75-b309-92074f2758bb`,
 production environment `c801129b-0a05-4e21-9b1c-784a19732ea0`.
-Railway browser access is now authenticated and the user upgraded the plan
-after the trial expired. The service has no active deployment and needs a new
-rollout. Its configured public host is
+Railway browser access is authenticated and the user upgraded the plan after
+the trial expired. After the user installed the Railway GitHub App for the
+transferred repository, the source was changed to `Vocametrix/vocametrix-mcp`
+on `master`. Deployment `14b05420-c2f6-4903-ab15-0777c669b644` is active,
+using MCP revision `a04ea58`. Its configured public host is
 `independent-happiness-production-75b7.up.railway.app`.
+Live checks returned HTTP 200 for `/health` and anonymous `/mcp` `tools/list`
+(40 tools). `/chatgpt/mcp` still returns 404 because OAuth is not configured.
+These checks did not consume API credits. Platform revision `72a37ac3` is
+committed locally but not pushed or deployed. The available ChatGPT browser
+session is signed out; its management callback has not been obtained.
 
 After the user's Azure password confirmation, `scripts/sql-migrate.cjs` was
 executed successfully against the production database. Its transaction committed
 and verified `McpOAuthCodes`, `McpOAuthFamilies`, and `McpOAuthTokens`.
 It reads credentials from stdin and applies the platform SQL file in a transaction.
 `scripts/sql-preflight.cjs` is read-only. Neither script contains credentials.
+Both read JSON from stdin, and Windows PowerShell 5.1 prefixes a UTF-8 BOM when
+piping to a native executable, which makes `JSON.parse` fail. The failure is
+reported as the script's generic error, not as a parse error, so it looks like a
+connection problem. Redirect from a BOM-free file through `cmd` instead:
+`cmd /c "node scripts/sql-preflight.cjs < payload.json"`.
 
 ## Request flow
 
@@ -111,6 +124,27 @@ not supported by this version.
 
 ## Rollout checks
 
+### Production verification — 2026-09-12
+
+Platform deployment `34690775906` succeeded (commit `8c6676bd`). Live checks
+passed for both metadata endpoints, the purple consent page with `strict-origin`,
+real account approval, PKCE code exchange, authenticated discovery of 40 MCP tools,
+and refresh rotation against the production SQL store. A real
+`vocametrix_convert_french_to_ipa` call for `bonjour` returned success and
+`/b ɔ̃ ʒ u ʁ/`. Each probe's own grant was revoked afterward.
+
+These initial checks used a direct HTTP client. Later the user completed OAuth
+linking in ChatGPT: settings confirmed the connection, and clicking Refresh loaded
+the tool definitions. A real French-to-IPA invocation from ChatGPT then succeeded
+for `bonjour`, returning `/b ɔ̃ ʒ u ʁ/`, with Vocametrix shown as a source and a
+completed tool activity in the UI. Test conversation:
+https://chatgpt.com/c/6aa541fc-6180-83eb-a439-d1664551182a
+Audio upload/analysis and public directory availability remain unverified. The
+plugin is still in development mode and its listing logo still needs configuration.
+Reproduction: `scripts/verify-live-oauth.mjs` with the documented OAuth config and
+API key supplied through environment variables; `--call` invokes the real API and
+may consume credits. The script logs no authentication secrets.
+
 - [ ] Select the final HTTPS MCP origin and obtain the exact ChatGPT callback.
 - [x] Review and apply `sql/mcp_oauth.sql` to the intended database. Check that
   `dbo.accounts.user_id` is an integer primary/unique key, and that the account
@@ -118,9 +152,114 @@ not supported by this version.
 - [ ] Set matching configuration and separate random secrets on both services.
 - [ ] Deploy the platform routes and MCP build. Confirm both metadata endpoints
   advertise the same exact resource and issuer.
-- [ ] Connect a dedicated review account in ChatGPT and approve API access.
-- [ ] Use a real, consented WAV sample to test upload and analysis. Confirm its
-  API credits change and the website subscription is not used.
+- [x] Connect the authorized test account in ChatGPT and approve API access.
+- [x] Prepare a separate metered review account — `review@vocametrix.com`,
+  created 15 September 2026, see the review account section below.
+- [x] Use a real, consented WAV sample to test upload and analysis — done on
+  15 September 2026, see the audio verification section below.
+- [x] Confirm on a metered account that an analysis increases `used_seconds`.
+- [x] Document the negative cases: rejected API key, call after revocation,
+  exhausted credits.
+- [x] Fix the error text returned on an exhausted quota, which reached the model
+  as `Unexpected error` carrying the raw backend JSON. Fixed in the working tree
+  on 15 September 2026; not deployed, so the live server still sends the old text.
+### Audio verification — 2026-09-15
+
+A real 25.0 s WAV recording (PCM 16-bit mono 16 kHz, 800 044 bytes, supplied by
+its owner) was sent through the authenticated `/chatgpt/mcp` endpoint using an
+OAuth grant obtained for the probe and revoked afterwards.
+`vocametrix_upload_audio` accepted the base64 payload and returned a
+`vocametrixstorageaccount.blob.core.windows.net` blobUrl; passing that blobUrl to
+`vocametrix_extract_egemaps` returned a successful chunked analysis, four chunks
+covering the whole 25 s, each with its eGeMAPS feature set. This is the first
+end-to-end proof that audio reaches the analysis API over the ChatGPT OAuth path.
+Reproduction: `scripts/verify-live-audio.mjs <file> --tool egemaps`, with the
+OAuth configuration and API key supplied through environment variables. It calls
+the real API and may consume the linked account's audio quota.
+
+Metering could not be observed on the first account used, and the reason was
+structural rather than a defect. Read-only checks of `dbo.accounts` before and
+after a billed call showed `used_seconds` unchanged at 811 290 and `credits`
+unchanged at 7 804. The route does meter — `gemapsExtract` calls
+`recordAudioUsage` in `routes/audio/audio.controller.js` — but that account
+carries `web_sub_status = comped`, so `hasWebAccess` is true and
+`checkApiAudioLimits` sets `webUnlimited`, which bills zero seconds by design
+(`helpers/apiUtils.js`). Any account holding an active website entitlement
+behaves this way on the programmatic API too; this is the deliberate trade-off
+recorded in that file. A separate metered account was created for this reason,
+and the measurement below was taken on it.
+
+### Review account — 2026-09-15
+
+`review@vocametrix.com` (`user_id` 608) was written directly to `dbo.accounts` by
+`scripts/create-review-account.cjs`, in one transaction, after an Azure password
+confirmation. The normal signup path cannot produce this account: its reCAPTCHA
+is not scriptable, and email verification grants a seven-day web trial
+(`TRIAL_DAYS = 7`, `routes/login/login.service.js`), which would make it
+unmetered for a week. `grantWebAccess.js --revoke` cannot fix that either — its
+`UPDATE` only matches `web_sub_status = 'comped'`.
+
+The account is `status = active`, `email_verified = 1`, plan `Platform Pack`
+(id 15), `credits = 100`, `max_seconds = 0`, `web_sub_status = 'expired'` with no
+trial and no Stripe subscription, so `hasWebAccess` is false and every analysis
+is billed. The script refuses to overwrite an existing address, and re-reads the
+written row inside its transaction, rolling back if the account would not be
+metered. Its mailbox does not exist: verification was set directly rather than
+by email, so password reset and any automated mail to that address will bounce.
+
+With that account, two consecutive 25.0 s analyses moved `used_seconds` from 0 to
+25 and then to 50 — the exact recording duration each time — while `credits`
+stayed at 100, since `used_seconds` and `credits` are two terms of one balance
+(`credits + (max_seconds - used_seconds) / 60`, `helpers/apiUtils.js`). The
+website subscription is not involved: this account has none.
+
+`vocametrix_extract_egemaps` answered in 13.2 s on the second run. On the first,
+the same call exceeded a 300 s client timeout and was still billed 25 s, because
+metering happens when the worker finishes, not when the client reads the reply.
+A client that gives up early therefore pays for the analysis anyway.
+
+### Negative cases — 2026-09-15
+
+`scripts/verify-live-negative.mjs`, run against the review account:
+
+- a nonexistent API key at consent yields no authorization code;
+- a freshly granted access token is accepted on `/chatgpt/mcp` (HTTP 200);
+- revocation is accepted (HTTP 200);
+- the same access token is refused afterwards (HTTP 401);
+- the revoked refresh token is refused (HTTP 400).
+
+The out-of-credit case was measured separately by `scripts/verify-live-quota.mjs`,
+which drives the review account's balance below zero, makes the call, and
+restores the original credits in a `finally` block, printing the restored value
+so a failed run cannot be mistaken for a clean one. With `credits` set to 0 and
+`used_seconds` at 50 the balance was −0.83, and the call was refused with
+HTTP 429 `Quota exceeded`. Two findings worth keeping:
+
+- the refusal happens at **upload**, not at analysis: `/api/get-blob-url` is
+  behind `checkApiAudioLimits` too, so an exhausted account never reaches the
+  analysis stage;
+- `used_seconds` stayed at 50 across the blocked attempt, so a refused call
+  costs nothing.
+
+The message ChatGPT received was `Unexpected error: HTTP 429: {"error":"Quota
+exceeded","details":...,"upgrade_url":...}` — wrong on two counts: an exhausted
+quota is an expected condition, not an unexpected error, and the raw backend JSON
+reached the model verbatim. The cause was in `src/client.ts`, whose `apiFetch`
+threw a plain `Error("HTTP <status>: <body>")`, while `translateError` in
+`src/errors.ts` recognised only the SDK's typed errors — so every direct
+`client.get`/`client.post` failure landed in its `Unexpected error` branch, not
+just this one. This is the same concern as the submission item about not
+returning debugging information unnecessarily.
+
+Fixed at the source rather than by parsing that message: `apiFetch` now throws
+`ApiHttpError(statusCode, body)`, and `translateError` names the condition per
+status — 429 says no credits remain and that nothing was charged, 401/402/403/404
+each get their own wording, 5xx says to retry. The body is logged server-side and
+never returned; a `details` or `error` string of at most 300 characters may be
+quoted, so a validation message still reaches the caller while an HTML error page
+or a long payload does not. `tests/errors.test.mjs` pins both halves. The live
+server still returns the old text until this is deployed.
+
 - [ ] Verify refresh and revocation against the real SQL store, including
   concurrent refresh attempts. Offline store fixtures do not prove database
   locking or migration compatibility.
