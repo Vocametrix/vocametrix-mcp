@@ -220,7 +220,16 @@ written row inside its transaction, rolling back if the account would not be
 metered. Its mailbox does not exist: verification was set directly rather than
 by email, so password reset and any automated mail to that address will bounce.
 
-With that account, two consecutive 25.0 s analyses moved `used_seconds` from 0 to
+A second review account, `review-nocredits@vocametrix.com` (`user_id` 609), was
+created the same way with `credits = 0`. It exists so that reviewers can observe
+the out-of-credit refusal themselves, without anyone writing to the database:
+`checkApiAudioLimits` blocks on `combinedBalance <= 0`, and a zero balance
+satisfies that. Verified on 15 September 2026 — the account connects over OAuth
+and discovers the tools normally, since consent checks `status`, `email_verified`
+and `expires_at` but not the balance, and every analysis is then refused with
+HTTP 429 at upload. Submit it as the fixture for the out-of-credit test case.
+
+With the first account, two consecutive 25.0 s analyses moved `used_seconds` from 0 to
 25 and then to 50 — the exact recording duration each time — while `credits`
 stayed at 100, since `used_seconds` and `credits` are two terms of one balance
 (`credits + (max_seconds - used_seconds) / 60`, `helpers/apiUtils.js`). The
