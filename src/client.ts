@@ -1,5 +1,6 @@
 import { VocametrixClient } from "vocametrix";
 import { resolveAudioInputToBuffer } from "./utils/audio-input.js";
+import { ApiHttpError } from "./errors.js";
 
 const BASE_URL = "https://platform.vocametrix.com";
 
@@ -46,7 +47,7 @@ export function createClient(explicitKey?: string): ApiClient {
     });
     if (!resp.ok) {
       const body = await resp.text();
-      throw new Error(`HTTP ${String(resp.status)}: ${body}`);
+      throw new ApiHttpError(resp.status, body);
     }
     return resp.json();
   }
