@@ -122,6 +122,19 @@ This initial flow does not implement OpenID Connect or UserInfo. Enterprise
 workspace restrictions based on a linked account's verified email domain are
 not supported by this version.
 
+Either implement it or state plainly in the submission that it is unsupported —
+but decide, rather than leave the claim unmade. The gap is narrower than it
+looks, measured against the current platform code rather than estimated: the
+grant already requires `a.email_verified` (`routes/oauth/core.js`), so the
+verified-email condition holds today; what is missing is the address itself,
+which `routes/oauth/store.js` does not select, a `/oauth/userinfo` endpoint
+returning `sub`, `email` and `email_verified` for a bearer token, `openid` and
+`email` alongside `vocametrix:api` in `scopes_supported`, and an
+`/.well-known/openid-configuration` advertising that endpoint. All of it lives in
+`vocametrix-platform`; the MCP server needs no change, since ChatGPT would call
+UserInfo directly. Releasing an email address to the client is a privacy decision
+in its own right and belongs in the consent wording, not only in the metadata.
+
 ## Rollout checks
 
 ### Production verification — 2026-09-12
