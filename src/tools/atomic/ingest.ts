@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ApiClient } from "../../client.js";
 import { translateError } from "../../errors.js";
-import { ok, READONLY_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
+import { ok, STATEFUL_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
 
 export function registerIngestUrlTool(server: McpServer, client: ApiClient): void {
   server.tool(
@@ -22,7 +22,7 @@ export function registerIngestUrlTool(server: McpServer, client: ApiClient): voi
         "'https://drive.google.com/uc?export=download&id=FILE_ID'. For Dropbox append '?dl=1'."
       ),
     },
-    READONLY_TOOL,
+    STATEFUL_TOOL,
     async ({ audioUrl }) => {
       try {
         const blobUrl = await client.uploadBlobUrl(audioUrl);

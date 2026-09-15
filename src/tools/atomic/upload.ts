@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ApiClient } from "../../client.js";
 import { translateError } from "../../errors.js";
-import { ok, READONLY_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
+import { ok, STATEFUL_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
 
 export function registerUploadTool(server: McpServer, client: ApiClient): void {
   server.tool(
@@ -23,7 +23,7 @@ export function registerUploadTool(server: McpServer, client: ApiClient): void {
         "before calling — do not pass an attachment identifier or filename."
       ),
     },
-    READONLY_TOOL,
+    STATEFUL_TOOL,
     async ({ audioBase64 }) => {
       try {
         const result = await client.uploadAudioFromBase64(audioBase64);

@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ApiClient } from "../../client.js";
 import { translateError } from "../../errors.js";
-import { ok, READONLY_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
+import { ok, ANALYSIS_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
 import { audioPath, gender, age, AVQI_VERSION } from "../../schemas/common.js";
 
 export function registerVoiceQualityTools(server: McpServer, client: ApiClient): void {
@@ -23,7 +23,7 @@ export function registerVoiceQualityTools(server: McpServer, client: ApiClient):
       connectedSpeechPath: audioPath.describe("Connected speech WAV file — patient reads the language-specific reference sentence (see vocametrix://recording-guide)"),
       language: z.enum(["en", "fr", "nl", "es", "de", "it"]).describe("Patient language — determines AVQI version and the reference sentence for connected speech"),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ sustainedVowelPath, connectedSpeechPath, language }) => {
       try {
         const svId = await client.uploadFileId(sustainedVowelPath);
@@ -58,7 +58,7 @@ export function registerVoiceQualityTools(server: McpServer, client: ApiClient):
       patientGender: gender,
       version: z.string().optional().default("v01").describe("Algorithm version (default: 'v01')"),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ sustainedVowelPath, mpt, maximumF0, minimumIntensity, patientAge, patientGender, version }) => {
       try {
         const svId = await client.uploadFileId(sustainedVowelPath);
@@ -89,7 +89,7 @@ export function registerVoiceQualityTools(server: McpServer, client: ApiClient):
     {
       sustainedVowelPath: audioPath.describe("Sustained vowel /a/ WAV file (/a/ held 3+ s at comfortable pitch)"),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ sustainedVowelPath }) => {
       try {
         const svId = await client.uploadFileId(sustainedVowelPath);
@@ -114,7 +114,7 @@ export function registerVoiceQualityTools(server: McpServer, client: ApiClient):
       patientAge: age,
       patientGender: gender,
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ sustainedVowelPath, patientAge, patientGender }) => {
       try {
         const svId = await client.uploadFileId(sustainedVowelPath);
@@ -141,7 +141,7 @@ export function registerVoiceQualityTools(server: McpServer, client: ApiClient):
     {
       sustainedVowelPath: audioPath.describe("Sustained vowel /a/ WAV file (/a/ held 3+ s at comfortable pitch)"),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ sustainedVowelPath }) => {
       try {
         const svId = await client.uploadFileId(sustainedVowelPath);
@@ -165,7 +165,7 @@ export function registerVoiceQualityTools(server: McpServer, client: ApiClient):
       patientAge: age.default(30),
       patientGender: gender.default("1"),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ glissandoPath, patientAge, patientGender }) => {
       try {
         const svId = await client.uploadFileId(glissandoPath);
@@ -192,7 +192,7 @@ export function registerVoiceQualityTools(server: McpServer, client: ApiClient):
       modelPath: audioPath.describe("Model (reference/teacher) WAV recording"),
       learnerPath: audioPath.describe("Learner (student) WAV recording to compare"),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ modelPath, learnerPath }) => {
       try {
         const modelId = await client.uploadFileId(modelPath);

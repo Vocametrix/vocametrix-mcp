@@ -33,7 +33,12 @@ export function registerFullTherapyWorkflow(server: McpServer, client: ApiClient
         const sessionId = String(startResult["threadId"] ?? startResult["session_id"] ?? "");
 
         if (!sessionId) {
-          return { content: [{ type: "text" as const, text: JSON.stringify(startResult, null, 2) }] };
+          // Dumping the whole response here sent the backend's internals to the
+          // model on a path where nothing useful could be done with them anyway.
+          return {
+            content: [{ type: "text" as const, text: "Therapy planning did not return a session identifier, so there is nothing to poll." }],
+            isError: true as const,
+          };
         }
 
         const deadline = Date.now() + timeoutMs;
@@ -46,7 +51,8 @@ export function registerFullTherapyWorkflow(server: McpServer, client: ApiClient
           const state = String(status["status"] ?? "");
           if (["complete", "pending_approval"].includes(state)) break;
           if (state === "failed") {
-            return { content: [{ type: "text" as const, text: `Therapy plan generation failed: ${JSON.stringify(status)}` }], isError: true as const };
+            const reason = typeof status["message"] === "string" ? `: ${status["message"]}` : ".";
+            return { content: [{ type: "text" as const, text: `Therapy plan generation failed${reason}` }], isError: true as const };
           }
         }
 
@@ -54,7 +60,9 @@ export function registerFullTherapyWorkflow(server: McpServer, client: ApiClient
         return {
           content: [{
             type: "text" as const,
-            text: `## Therapy Plan Generated\n\nSession ID: ${sessionId}\nStatus: ${JSON.stringify(lastStatus, null, 2)}\n\n### Plan\n\`\`\`json\n${JSON.stringify(result, null, 2)}\n\`\`\`\n\nCall vocametrix_approve_therapy_plan with sessionId="${sessionId}" to approve, modify, or reject.`,
+            // The session id is needed for the approval call, so it stays; the
+            // polling status was internal bookkeeping and is dropped.
+            text: `## Therapy Plan Generated\n\nSession ID: ${sessionId}\nStatus: ${String((lastStatus as Record<string, unknown> | null)?.["status"] ?? "unknown")}\n\n### Plan\n\`\`\`json\n${JSON.stringify(result, null, 2)}\n\`\`\`\n\nCall vocametrix_approve_therapy_plan with sessionId="${sessionId}" to approve, modify, or reject.`,
           }],
         };
       } catch (e) { return translateError(e); }

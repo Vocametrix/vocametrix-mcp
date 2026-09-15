@@ -1,6 +1,18 @@
 import { readFileSync } from "fs";
 
 /**
+ * Whether this deployment may touch the machine's filesystem at all.
+ *
+ * Only a stdio/local deployment opts in. On the hosted server the filesystem is
+ * the server's own, never the user's, so anything reading it is at best useless
+ * and at worst a way to enumerate the host — which is why tool registration
+ * consults this too, not just path resolution.
+ */
+export function localFilesystemEnabled(): boolean {
+  return process.env["VOCAMETRIX_MCP_LOCAL_FS"] === "1";
+}
+
+/**
  * Resolve an audioPath input value to raw audio bytes.
  *
  * Accepted inputs:
@@ -43,12 +55,13 @@ export async function resolveAudioInputToBuffer(input: string): Promise<Buffer> 
 
   // (4) Absolute local path — only valid in stdio/local mode (opt-in).
   if (input.startsWith("/") || /^[A-Za-z]:[\\/]/.test(input)) {
-    if (process.env["VOCAMETRIX_MCP_LOCAL_FS"] === "1") {
+    if (localFilesystemEnabled()) {
       return readFileSync(input);
     }
     throw new Error(
       `Local file paths are only readable in stdio/local mode. ` +
-      `Received: "${input.slice(0, 120)}". ` +
+      `Received an absolute path, which is not echoed back because it usually ` +
+      `carries a user name or a patient file name. ` +
       `On the hosted Vocametrix MCP server, you MUST first call vocametrix_upload_audio ` +
       `with the file content base64-encoded, then pass the returned blobUrl as audioPath.`
     );
@@ -57,7 +70,8 @@ export async function resolveAudioInputToBuffer(input: string): Promise<Buffer> 
   // (5) Anything else — almost certainly an opaque attachment identifier from the
   //     chat client. Refuse with a message that tells the LLM what to do.
   throw new Error(
-    `audioPath value "${input.slice(0, 120)}" is not a fetchable URL, a data URL, ` +
+    `The audioPath value (${String(input.length)} characters, not echoed back since it may ` +
+    `identify a person) is not a fetchable URL, a data URL, ` +
     `raw base64, or an absolute path. This is most likely an opaque attachment ` +
     `identifier from the chat client, which the remote Vocametrix MCP server cannot ` +
     `resolve. To process an attached audio file: (1) read the file content, ` +

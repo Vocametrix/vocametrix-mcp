@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ApiClient } from "../../client.js";
 import { translateError } from "../../errors.js";
-import { ok, READONLY_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
+import { ok, ANALYSIS_TOOL, STATEFUL_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
 import { audioPath } from "../../schemas/common.js";
 
 export function registerAudioMeasureTools(server: McpServer, client: ApiClient): void {
@@ -17,7 +17,7 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
       startSec: z.number().min(0.001).default(0.001).describe("Start time in seconds (minimum 0.001)"),
       endSec: z.number().positive().optional().describe("End time in seconds (defaults to end of file)"),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ audioPath: path, startSec, endSec }) => {
       try {
         const blobUrl = await client.uploadBlobUrl(path);
@@ -42,7 +42,7 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
     {
       audioPath: audioPath,
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ audioPath: path }) => {
       try {
         const fileId = await client.uploadFileId(path);
@@ -64,7 +64,7 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
       model: z.literal("logatome-champion").optional()
         .describe("Optional: pass 'logatome-champion' to use the logatome-trained classifier instead of the baseline"),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ audioPath: path, model }) => {
       try {
         const fileId = await client.uploadFileId(path);
@@ -92,7 +92,8 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
       timeoutMs: z.number().int().min(10000).max(900000).default(620000)
         .describe("Maximum wait time in ms before giving up (default 620000 = ~10 min)"),
     },
-    READONLY_TOOL,
+    // Opens a classification session that outlives the call, so not read-only.
+    STATEFUL_TOOL,
     async ({ audioPath: path, pollIntervalMs, timeoutMs }) => {
       try {
         const fileId = await client.uploadFileId(path);
@@ -106,7 +107,10 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
           const state = String(status["status"] ?? status["state"] ?? "");
           if (["completed", "succeeded", "done"].includes(state)) break;
           if (["failed", "error"].includes(state)) {
-            return { content: [{ type: "text" as const, text: `Classification failed: ${JSON.stringify(status)}` }], isError: true as const };
+            // Only the backend's own explanation, never the whole status object:
+            // its other fields are internal and would reach the model unexamined.
+            const reason = typeof status["message"] === "string" ? `: ${status["message"]}` : ".";
+            return { content: [{ type: "text" as const, text: `Classification failed${reason}` }], isError: true as const };
           }
         }
 

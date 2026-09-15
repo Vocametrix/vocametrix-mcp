@@ -1,12 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { writeFileSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
-import { randomUUID } from "crypto";
 import { ApiClient } from "../../client.js";
 import { translateError } from "../../errors.js";
-import { ok, READONLY_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
+import { ok, ANALYSIS_TOOL, STATEFUL_TOOL, GENERIC_OUTPUT_SCHEMA } from "../../utils/mcp.js";
 import { audioPath, locale } from "../../schemas/common.js";
 
 export function registerCoreSpeechTools(server: McpServer, client: ApiClient): void {
@@ -22,7 +18,7 @@ export function registerCoreSpeechTools(server: McpServer, client: ApiClient): v
       referenceText: z.string().min(1).describe("The text the speaker was reading aloud"),
       speakerLocale: locale,
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ audioPath: path, referenceText, speakerLocale }) => {
       try {
         const blobURL = await client.uploadBlobUrl(path);
@@ -47,7 +43,7 @@ export function registerCoreSpeechTools(server: McpServer, client: ApiClient): v
       referenceText: z.string().min(1).describe("The text the speaker was reading aloud"),
       speakerLocale: locale,
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ audioPath: path, referenceText, speakerLocale }) => {
       try {
         const blobURL = await client.uploadBlobUrl(path);
@@ -72,7 +68,8 @@ export function registerCoreSpeechTools(server: McpServer, client: ApiClient): v
       audioPath: audioPath,
       speakerLocale: locale,
     },
-    READONLY_TOOL,
+    // Submits a transcription job that outlives the call, so not read-only.
+    STATEFUL_TOOL,
     async ({ audioPath: path, speakerLocale }) => {
       try {
         const blobURL = await client.uploadBlobUrl(path);
@@ -86,7 +83,7 @@ export function registerCoreSpeechTools(server: McpServer, client: ApiClient): v
 
         const resp = await fetch(sseUrl, { headers: { "X-API-Key": client.apiKey } });
         if (!resp.ok || !resp.body) {
-          return ok({ transcriptionId, status: "submitted", message: "Transcription submitted. Poll status with transcriptionId: " + transcriptionId });
+          return ok({ transcriptionId, status: "submitted", message: "Transcription submitted. Poll its status with the transcriptionId returned here." });
         }
 
         const reader = resp.body.getReader();
@@ -114,7 +111,17 @@ export function registerCoreSpeechTools(server: McpServer, client: ApiClient): v
           }
         }
 
-        return ok(lastEvent ?? { transcriptionId, status: "unknown" });
+        // Project onto known fields rather than forwarding the event: its shape
+        // is the backend's to change, and whatever it adds would otherwise land
+        // in the model's context unexamined.
+        if (lastEvent === null) return ok({ status: "unknown" });
+        const event = lastEvent as Record<string, unknown>;
+        return ok({
+          status: event["status"],
+          transcript: event["transcript"] ?? event["text"],
+          words: event["words"],
+          durationSeconds: event["duration"],
+        });
       } catch (e) { return translateError(e); }
     },
   ).update({ outputSchema: GENERIC_OUTPUT_SCHEMA });
@@ -123,7 +130,7 @@ export function registerCoreSpeechTools(server: McpServer, client: ApiClient): v
   server.tool(
     "vocametrix_synthesize_speech",
     "Synthesize speech from text using Azure neural text-to-speech. " +
-    "Returns filePath (saved WAV file) and dataUrl (data URI for immediate audio playback). " +
+    "Returns dataUrl, a data URI carrying the whole clip for immediate audio playback. " +
     "Use dataUrl as the src of an HTML audio element to let the user play the audio. " +
     "Supports all Azure Neural voice names for the requested locale. " +
     "BEFORE CALLING: Detect the language of the text. Set speakerLocale to the matching BCP-47 code " +
@@ -135,7 +142,7 @@ export function registerCoreSpeechTools(server: McpServer, client: ApiClient): v
       speakerLocale: locale,
       voiceName: z.string().optional().describe('Azure Neural voice name, e.g. "fr-FR-DeniseNeural", "en-US-JennyNeural"'),
     },
-    READONLY_TOOL,
+    ANALYSIS_TOOL,
     async ({ text, speakerLocale, voiceName }) => {
       try {
         const body: Record<string, string> = { text, language: speakerLocale };
@@ -144,11 +151,12 @@ export function registerCoreSpeechTools(server: McpServer, client: ApiClient): v
         const audioBase64 = result["audio"] as string | undefined;
         if (!audioBase64) return ok(result);
         const format = (result["format"] as string | undefined) ?? "wav";
-        const filePath = join(tmpdir(), `vocametrix-tts-${randomUUID()}.${format}`);
-        writeFileSync(filePath, Buffer.from(audioBase64, "base64"));
         const mimeType = format === "mp3" ? "audio/mpeg" : "audio/wav";
+        // The data URL carries the whole clip, so writing a copy into the
+        // server's tmpdir only accumulated files nothing ever deleted, and
+        // handed the caller a path on a filesystem that is not its own.
         const dataUrl = `data:${mimeType};base64,${audioBase64}`;
-        return ok({ filePath, dataUrl, format, voice: result["voice"], textLength: result["textLength"] });
+        return ok({ dataUrl, format, voice: result["voice"], textLength: result["textLength"] });
       } catch (e) { return translateError(e); }
     },
   ).update({ outputSchema: GENERIC_OUTPUT_SCHEMA });

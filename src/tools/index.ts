@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ApiClient } from "../client.js";
+import { localFilesystemEnabled } from "../utils/audio-input.js";
 import { registerUploadTool } from "./atomic/upload.js";
 import { registerIngestUrlTool } from "./atomic/ingest.js";
 import { registerVoiceQualityTools } from "./atomic/voice-quality.js";
@@ -22,6 +23,9 @@ export function registerAllTools(server: McpServer, client: ApiClient): void {
   registerAiAgentTools(server, client);
   registerTherapyTools(server, client);
   registerFullVoiceAssessment(server, client);
-  registerBatchPronunciation(server, client);
+  // Reads a folder from disk, so it only makes sense where that disk is the
+  // user's. On the hosted server it would enumerate the server's filesystem
+  // instead, which is why it is not published there at all.
+  if (localFilesystemEnabled()) registerBatchPronunciation(server, client);
   registerFullTherapyWorkflow(server, client);
 }
