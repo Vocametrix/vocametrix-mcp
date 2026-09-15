@@ -322,6 +322,46 @@ introspection limit makes authorization temporarily unavailable for that IP.
 Automatic approval review rejected a proposed adjustment; the limits remain
 in place. Reassess this capacity before a broader rollout.
 
+## Tool audit — 2026-09-15
+
+All 40 tools were reviewed against the publication requirements: do the
+annotations match what the handler does, and do the responses carry anything
+they should not. What was wrong is fixed and pinned by
+`tests/published-surface.test.mjs`, which reads the running server because tool
+registration is now conditional.
+
+What remains is not a defect list but three decisions that are not the MCP
+server's to take alone.
+
+**The blob URL reaches the model.** `vocametrix_upload_audio` returns the storage
+URL, and it has to: the model passes it straight back as `audioPath` to an
+analysis tool. So the host name `vocametrixstorageaccount.blob.core.windows.net`
+enters the model's context and the conversation transcript, together with a link
+to the recording. Measured on a real upload, that link is a read-only SAS lasting
+65 minutes (`sp=r`, `st`/`se` one hour and five minutes apart) — not a public
+container, which is the reassuring half. Replacing it with an opaque reference
+would mean the MCP server resolving references itself, hence server-side state
+across what is today a stateless deployment. Worth doing, not worth improvising.
+
+**Patient identifiers and clinical history pass through the model.**
+`vocametrix_generate_therapy_plan` requires `patient_id` and accepts
+`patientAnamnesis` — "demographics, clinical history" in free text — and the
+session is returned in full, so both come back verbatim. This is by design, not
+by accident, and it is the heaviest exposure in the connector: special-category
+data under the GDPR, travelling through a third-party model. Decide whether
+`patient_id` is documented as a pseudonym and whether the anamnesis is filtered
+out of responses, before review rather than during it.
+
+**One claim is still unverified.** The description of
+`vocametrix_get_therapy_result` announces an "HTML report path" in its payload.
+The payload is opaque here, so whether a server path actually reaches the model
+can only be settled against the live API.
+
+Not done, deliberately: the tool descriptions do not say that a call spends
+credits. The annotations now carry that (`readOnlyHint: false`,
+`idempotentHint: false`), which is what the review checks; wording it in 29
+descriptions is a separate, larger edit.
+
 ## Public submission remains separate
 
 Prepare the verified publisher identity, real logo, descriptions, support and
