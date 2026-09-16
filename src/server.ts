@@ -114,6 +114,22 @@ if (port) {
       });
       return;
     }
+    if (path === "/.well-known/openai-apps-challenge") {
+      if (req.method !== "GET") {
+        res.writeHead(405, { Allow: "GET" });
+        res.end();
+        return;
+      }
+      const token = process.env["OPENAI_APPS_CHALLENGE_TOKEN"];
+      if (!token) {
+        res.writeHead(404);
+        res.end("Not found");
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end(token);
+      return;
+    }
     if (path === "/mcp") {
       // Stateless mode: we create a fresh McpServer per HTTP request, so the
       // standalone GET SSE notification stream the SDK would open has no producer.
