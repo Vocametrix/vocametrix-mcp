@@ -352,10 +352,33 @@ data under the GDPR, travelling through a third-party model. Decide whether
 `patient_id` is documented as a pseudonym and whether the anamnesis is filtered
 out of responses, before review rather than during it.
 
-**One claim is still unverified.** The description of
-`vocametrix_get_therapy_result` announces an "HTML report path" in its payload.
-The payload is opaque here, so whether a server path actually reaches the model
-can only be settled against the live API.
+**The "HTML report path" claim is confirmed, and it is worse than a path
+label — 2026-09-16.** Settled by reading `vocametrix-platform`, not by a live
+call: `routes/audio/python.service.js` builds the `/api/therapy-result`
+payload from `therapyResult.output_file` and `therapyResult.html_clinician_final`,
+and `getTherapyPlanHtml` (line ~4675) calls `fs.existsSync(htmlFilePath)`
+directly on that same value — proof it is a raw server filesystem path, not a
+URL. `vocametrix_get_therapy_result` returns that payload verbatim, so the
+backend's local file layout enters the model's context on every completed
+therapy session. Fourth decision for the same call as the two above: filter
+`output_file`/`html_clinician_final` out of the MCP response, or replace them
+with a proper delivery URL through `/api/therapy-plan-html/:sessionId`
+(already implemented, currently unused by any MCP tool).
+
+**A separate defect, fixed same day.** Both `vocametrix_generate_therapy_plan`
+and `vocametrix_full_therapy_workflow` told the model that `wav2vecOutput`
+comes from `vocametrix_extract_egemaps` called with `extractWav2Vec=true`.
+Neither is true: `vocametrix_extract_egemaps` takes only `audioPath` and
+returns eGeMAPS acoustic features (`routes/audio/audio.service.js:915-927`),
+never wav2vec output, and has no such parameter. The real source of the
+`summary_statistics` shape the endpoint requires
+(`disfluency_types_detected`, `overall_fluency_rate`, `total_segments` —
+`routes/agent/agent.controller.js:600-602`) is `vocametrix_classify_stuttering`.
+A model following the old instruction literally would call the wrong tool,
+get back unrelated acoustic features, and either have the backend reject the
+therapy-plan request with 400 or — worse, exactly what the instruction told it
+not to do — fabricate the missing field. Fixed in both tool descriptions;
+`npm test` still passes (31/31), nothing pinned this string.
 
 Not done, deliberately: the tool descriptions do not say that a call spends
 credits. The annotations now carry that (`readOnlyHint: false`,

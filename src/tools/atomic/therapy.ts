@@ -11,8 +11,8 @@ export function registerTherapyTools(server: McpServer, client: ApiClient): void
     "Launch an asynchronous LangGraph-powered therapy plan generation from session audio embeddings. " +
     "Returns a therapy_session_id. Use vocametrix_get_therapy_status to poll progress, " +
     "then vocametrix_get_therapy_result to retrieve the plan once complete (~30–120 seconds). " +
-    "BEFORE CALLING: Confirm that wav2vecOutput comes from vocametrix_extract_egemaps " +
-    "(called with extractWav2Vec=true) — do not pass invented or placeholder data. " +
+    "BEFORE CALLING: Confirm that wav2vecOutput comes from vocametrix_classify_stuttering's " +
+    "summary_statistics — do not pass invented or placeholder data. " +
     "Passing arbitrary values will produce a clinically meaningless therapy plan.",
     {
       sessionMetadata: z.record(z.unknown()).describe("Session metadata object (must include patient_id)"),
