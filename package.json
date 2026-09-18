@@ -18,7 +18,11 @@
     "test": "npm run build && node --test tests/*.test.mjs",
     "inspector": "npx @modelcontextprotocol/inspector dist/server.js"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "vocametrix": "^0.1.0",
@@ -26,14 +30,25 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "tsx": "^4.0.0",
+    "tsx": "^4.23.13",
     "typescript": "^5.4.0"
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
-    "mcp", "mcp-server", "model-context-protocol", "claude",
-    "voice-analysis", "speech-therapy", "slp", "vocametrix",
-    "acoustic-analysis", "praat", "agentic", "llm-tools"
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "claude",
+    "voice-analysis",
+    "speech-therapy",
+    "slp",
+    "vocametrix",
+    "acoustic-analysis",
+    "praat",
+    "agentic",
+    "llm-tools"
   ],
   "author": "Vocametrix",
   "license": "MIT",
@@ -42,5 +57,7 @@
     "url": "git+https://github.com/Vocametrix/vocametrix-mcp.git"
   },
   "homepage": "https://www.vocametrix.com/api-docs",
-  "bugs": { "url": "https://github.com/Vocametrix/vocametrix-mcp/issues" }
+  "bugs": {
+    "url": "https://github.com/Vocametrix/vocametrix-mcp/issues"
+  }
 }
