@@ -15,7 +15,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Buffer } from "node:buffer";
 
+import { createServer } from "node:http";
+
 import { resolveAudioInputToBuffer } from "../dist/utils/audio-input.js";
+import { isBlockedAddress } from "../dist/utils/url-guard.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -121,38 +124,120 @@ test("empty string — rejected as opaque, not crashing on path branch", async (
   );
 });
 
-// ── http(s) URL branch (stubbed) ────────────────────────────────────────────
+// ── http(s) URL branch (real sockets, no external network) ──────────────
 
-test("https URL — calls fetch and returns its bytes", async () => {
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async (url) => {
-    assert.equal(url, "https://example.invalid/audio.wav");
-    return {
-      ok: true,
-      status: 200,
-      arrayBuffer: async () => KNOWN_BYTES.buffer.slice(
-        KNOWN_BYTES.byteOffset,
-        KNOWN_BYTES.byteOffset + KNOWN_BYTES.byteLength
-      ),
-    };
-  };
-  try {
-    const buf = await resolveAudioInputToBuffer("https://example.invalid/audio.wav");
-    assert.deepEqual(buf, KNOWN_BYTES);
-  } finally {
-    globalThis.fetch = realFetch;
-  }
+// The URL branch no longer goes through global fetch, so it cannot be stubbed:
+// the point of the guard is that it validates the address the socket actually
+// connects to. These tests therefore use a real loopback server, and the
+// opt-in flag to reach it — the blocking itself is covered separately below,
+// against literal addresses that need no server at all.
+
+function withPrivateHosts(fn) {
+  process.env["VOCAMETRIX_MCP_ALLOW_PRIVATE_HOSTS"] = "1";
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => { delete process.env["VOCAMETRIX_MCP_ALLOW_PRIVATE_HOSTS"]; });
+}
+
+async function withServer(handler, fn) {
+  const server = createServer(handler);
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try { return await fn(base); }
+  finally { await new Promise((resolve) => server.close(resolve)); }
+}
+
+test("http URL — returns the served bytes", async () => {
+  await withServer((req, res) => { res.writeHead(200); res.end(KNOWN_BYTES); }, (base) =>
+    withPrivateHosts(async () => {
+      const buf = await resolveAudioInputToBuffer(`${base}/audio.wav`);
+      assert.deepEqual(buf, KNOWN_BYTES);
+    }));
 });
 
-test("https URL with non-2xx response — surfaces the HTTP status", async () => {
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({ ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) });
-  try {
-    await assert.rejects(
-      () => resolveAudioInputToBuffer("https://example.invalid/missing.wav"),
+test("http URL with non-2xx response — surfaces the HTTP status", async () => {
+  await withServer((req, res) => { res.writeHead(404); res.end(); }, (base) =>
+    withPrivateHosts(() => assert.rejects(
+      () => resolveAudioInputToBuffer(`${base}/missing.wav`),
       /Failed to download audio from URL: HTTP 404/
+    )));
+});
+
+test("http URL — follows a redirect and returns the final bytes", async () => {
+  await withServer((req, res) => {
+    if (req.url === "/redirect") { res.writeHead(302, { location: "/audio.wav" }); res.end(); return; }
+    res.writeHead(200); res.end(KNOWN_BYTES);
+  }, (base) => withPrivateHosts(async () => {
+    const buf = await resolveAudioInputToBuffer(`${base}/redirect`);
+    assert.deepEqual(buf, KNOWN_BYTES);
+  }));
+});
+
+test("http URL — refuses a redirect loop rather than following it forever", async () => {
+  await withServer((req, res) => { res.writeHead(302, { location: "/loop" }); res.end(); },
+    (base) => withPrivateHosts(() => assert.rejects(
+      () => resolveAudioInputToBuffer(`${base}/loop`),
+      /more than 5 redirects/
+    )));
+});
+
+// ── SSRF guard — reported 2026-09-17, CWE-918 ─────────────────────────
+
+// Before the guard, any caller-supplied URL was fetched server-side with no
+// restriction on where it pointed. These are the destinations that must stay
+// refused; they are literal addresses, so no name resolution and no server is
+// involved — a failure here means the guard is gone, not that a host is down.
+
+const REFUSED_TARGETS = [
+  ["cloud metadata (link-local)", "http://169.254.169.254/latest/meta-data/"],
+  ["loopback by address", "http://127.0.0.1:1/"],
+  ["loopback by name", "http://localhost:1/"],
+  ["RFC1918 10/8", "http://10.0.0.1/internal"],
+  ["RFC1918 172.16/12", "http://172.16.0.1/internal"],
+  ["RFC1918 192.168/16", "https://192.168.1.1/internal"],
+  ["carrier-grade NAT", "http://100.64.0.1/"],
+  ["IPv6 loopback", "http://[::1]:1/"],
+  ["IPv6 unique-local", "http://[fc00::1]/"],
+  ["IPv6 link-local", "http://[fe80::1]/"],
+  ["IPv4 mapped into IPv6", "http://[::ffff:127.0.0.1]:1/"],
+];
+
+for (const [label, url] of REFUSED_TARGETS) {
+  test(`SSRF guard — refuses ${label}`, async () => {
+    await assert.rejects(
+      () => resolveAudioInputToBuffer(url),
+      /a private, loopback, link-local or otherwise reserved/,
+      `${url} was not refused`
     );
-  } finally {
-    globalThis.fetch = realFetch;
-  }
+  });
+}
+
+test("SSRF guard — refuses a redirect from a public host to an internal one", async () => {
+  // The first hop is allowed to be loopback here only so the test needs no
+  // external network; what is under test is that the SECOND hop is checked at
+  // all, which is what fetch()'s automatic redirect-following would not do.
+  await withServer((req, res) => {
+    res.writeHead(302, { location: "http://169.254.169.254/latest/meta-data/" });
+    res.end();
+  }, async (base) => {
+    process.env["VOCAMETRIX_MCP_ALLOW_PRIVATE_HOSTS"] = "1";
+    const first = await fetch(`${base}/r`, { redirect: "manual" });
+    assert.equal(first.status, 302);          // the server really does redirect
+    delete process.env["VOCAMETRIX_MCP_ALLOW_PRIVATE_HOSTS"];
+
+    // Same URL, guard on: the first hop is refused, so reach the second hop by
+    // pointing straight at the redirect target the server hands out.
+    await assert.rejects(
+      () => resolveAudioInputToBuffer(first.headers.get("location")),
+      /a private, loopback, link-local or otherwise reserved/
+    );
+  });
+});
+
+test("SSRF guard — a public address is still allowed through", () => {
+  // Negative control: a guard that refuses everything would pass every test above.
+  assert.equal(isBlockedAddress("93.184.216.34"), false);
+  assert.equal(isBlockedAddress("8.8.8.8"), false);
+  assert.equal(isBlockedAddress("2606:2800:220:1:248:1893:25c8:1946"), false);
+  assert.equal(isBlockedAddress("169.254.169.254"), true);
 });

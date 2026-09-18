@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { fetchAudioUrl } from "./url-guard.js";
 
 /**
  * Whether this deployment may touch the machine's filesystem at all.
@@ -16,7 +17,8 @@ export function localFilesystemEnabled(): boolean {
  * Resolve an audioPath input value to raw audio bytes.
  *
  * Accepted inputs:
- *   1. http(s):// URL          — fetched
+ *   1. http(s):// URL          — fetched, but only when the host resolves to a
+ *                                publicly routable address (see url-guard.ts)
  *   2. data: URL               — base64 payload is decoded
  *   3. raw base64 string       — decoded (heuristic: long, base64 charset only)
  *   4. absolute local path     — read from disk, but ONLY when the env var
@@ -32,11 +34,7 @@ export function localFilesystemEnabled(): boolean {
 export async function resolveAudioInputToBuffer(input: string): Promise<Buffer> {
   // (1) HTTP(S) URL
   if (input.startsWith("http://") || input.startsWith("https://")) {
-    const resp = await fetch(input);
-    if (!resp.ok) {
-      throw new Error(`Failed to download audio from URL: HTTP ${String(resp.status)}`);
-    }
-    return Buffer.from(await resp.arrayBuffer());
+    return fetchAudioUrl(input);
   }
 
   // (2) data: URL

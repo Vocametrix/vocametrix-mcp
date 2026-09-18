@@ -150,6 +150,7 @@ The `audioPath` parameter accepts several input types, but **which ones are vali
 |----------|----------|-------------|
 | `VOCAMETRIX_API_KEY` | Yes | Your Vocametrix API key |
 | `VOCAMETRIX_MCP_LOCAL_FS` | No | Set to `1` to allow analysis tools to read absolute local file paths (stdio/local deployments only). Default off — local paths are rejected with an actionable error so chat clients are pushed toward the `vocametrix_upload_audio` → `blobUrl` workflow. |
+| `VOCAMETRIX_MCP_ALLOW_PRIVATE_HOSTS` | No | Set to `1` to allow fetching audio URLs whose host resolves to a private, loopback or link-local address (a LAN file server, for instance). Default off, including in stdio/local mode: the caller of an MCP tool is an LLM, and an LLM that has read a hostile page can be talked into pointing these tools at your own network. |
 
 ## Development
 
