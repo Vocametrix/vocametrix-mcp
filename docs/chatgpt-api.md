@@ -105,9 +105,24 @@ them or put them in a URL.
 | `MCP_OAUTH_RESOURCE` | Required | Required | Your chosen public MCP HTTPS origin followed by `/chatgpt/mcp`; identical on both services |
 | `MCP_OAUTH_INTROSPECTION_SECRET` | Required | Required | The same independently generated random secret on both services; at least 32 characters |
 | `MCP_OAUTH_CLIENT_ID` | Required | No | The predefined client ID entered in ChatGPT's OAuth configuration |
-| `MCP_OAUTH_CLIENT_SECRET` | Required | No | A separate random secret, at least 32 characters; entered in ChatGPT's OAuth configuration |
+| `MCP_OAUTH_CLIENT_SECRET` | Required | No | At least 32 characters; kept for a future confidential client, but not required from the request — see note below |
 | `MCP_OAUTH_REDIRECT_URI` | Required | No | The exact HTTPS callback shown by ChatGPT for this connection |
 | `PORT` | Existing configuration | Required for HTTP mode | Hosting environment's assigned port |
+
+**2026-09-16 — the client is public, not confidential.** ChatGPT's "pre-defined
+client" registration UI has a field for the OAuth Client ID and none for a
+client secret, so it never sends one at `/oauth/token` or `/oauth/revoke`.
+The Platform's `token()`/`revoke()` now accept a request with no
+`client_secret`, relying on PKCE (already mandatory on the authorization
+code exchange) instead of a static secret a browser-mediated flow couldn't
+keep confidential anyway. A secret is still checked when one is sent, so
+this stays backward compatible with a future confidential client. Discovery
+metadata (`token_endpoint_auth_methods_supported`,
+`revocation_endpoint_auth_methods_supported`) now advertises `none` first.
+Symptom this fixes: the authorization step succeeds (a code is issued and
+the redirect back to ChatGPT carries it), but ChatGPT's "Scan Tools" spins
+forever because the subsequent token exchange keeps failing `invalid_client`
+with no error surfaced in the UI.
 
 Both services leave OAuth disabled when their OAuth variables are absent and
 fail startup on partial or invalid configuration. Do not set a shared
