@@ -3,17 +3,17 @@
   "name": "io.github.pmarmaroli/vocametrix-mcp",
   "title": "Vocametrix Voice Analysis",
   "description": "Clinical voice analysis MCP server — AVQI, DSI, jitter/shimmer, pronunciation assessment, and more.",
-  "version": "0.1.1",
+  "version": "0.1.6",
   "websiteUrl": "https://www.vocametrix.com/api-docs",
   "repository": {
-    "url": "https://github.com/pmarmaroli/vocametrix-mcp.git",
+    "url": "https://github.com/Vocametrix/vocametrix-mcp.git",
     "source": "github"
   },
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@vocametrix/mcp-server",
-      "version": "0.1.1",
+      "version": "0.1.6",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

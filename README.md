@@ -39,24 +39,24 @@ See [ChatGPT setup and release checks](docs/chatgpt-api.md) for the matching pla
 ### Voice quality (acoustic)
 | Tool | Description |
 |------|-------------|
-| `vocametrix_avqi` | Acoustic Voice Quality Index (AVQI) — overall dysphonia severity |
-| `vocametrix_dsi` | Dysphonia Severity Index (DSI) |
-| `vocametrix_cpp_cpps` | Cepstral Peak Prominence — breathiness, hoarseness |
-| `vocametrix_hnr` | Harmonics-to-Noise Ratio (multi-band) |
-| `vocametrix_jitter_shimmer` | Period and amplitude perturbation |
-| `vocametrix_vrp` | Voice Range Profile |
-| `vocametrix_prosody_similarity` | Prosody similarity between two utterances |
+| `vocametrix_calculate_avqi` | Acoustic Voice Quality Index (AVQI) — overall dysphonia severity |
+| `vocametrix_calculate_dsi` | Dysphonia Severity Index (DSI) |
+| `vocametrix_calculate_cpp` | Cepstral Peak Prominence — breathiness, hoarseness |
+| `vocametrix_calculate_hnr` | Harmonics-to-Noise Ratio (multi-band) |
+| `vocametrix_calculate_jitter_shimmer` | Period and amplitude perturbation |
+| `vocametrix_calculate_voice_range_profile` | Voice Range Profile |
+| `vocametrix_calculate_prosody_similarity` | Prosody similarity between two utterances |
 
 ### Advanced voice analysis
 | Tool | Description |
 |------|-------------|
-| `vocametrix_spectral` | Spectral tilt, slope, and formant energy |
-| `vocametrix_formants` | Formant frequencies F1–F4 |
-| `vocametrix_sz_ratio` | S/Z phonation ratio |
-| `vocametrix_gne` | Glottal-to-Noise Excitation |
-| `vocametrix_h1h2` | H1–H2 harmonic difference |
-| `vocametrix_abi` | Acoustic Breathiness Index |
-| `vocametrix_voice_dynamics` | Dynamic range and fundamental frequency statistics |
+| `vocametrix_calculate_spectral` | Spectral tilt, slope, and formant energy |
+| `vocametrix_calculate_formants` | Formant frequencies F1–F4 |
+| `vocametrix_calculate_sz_ratio` | S/Z phonation ratio |
+| `vocametrix_calculate_gne` | Glottal-to-Noise Excitation |
+| `vocametrix_calculate_h1_h2` | H1–H2 harmonic difference |
+| `vocametrix_calculate_abi` | Acoustic Breathiness Index |
+| `vocametrix_calculate_voice_dynamics` | Dynamic range and fundamental frequency statistics |
 
 ### Ingestion utilities
 | Tool | Description |
@@ -68,31 +68,30 @@ See [ChatGPT setup and release checks](docs/chatgpt-api.md) for the matching pla
 | Tool | Description |
 |------|-------------|
 | `vocametrix_assess_pronunciation` | Phoneme-level pronunciation scoring |
-| `vocametrix_assess_pronunciation_pitch` | Pronunciation + pitch analysis combined |
-| `vocametrix_transcribe` | Streaming ASR transcription with progress |
-| `vocametrix_tts` | Text-to-speech synthesis |
-| `vocametrix_tts_timing` | TTS with word-level timing data |
+| `vocametrix_assess_pronunciation_with_pitch` | Pronunciation + pitch analysis combined |
+| `vocametrix_transcribe_audio` | Streaming ASR transcription with progress |
+| `vocametrix_synthesize_speech` | Text-to-speech synthesis |
 
 ### Audio measures
 | Tool | Description |
 |------|-------------|
-| `vocametrix_sound_level` | dB SPL and intensity statistics |
-| `vocametrix_egemaps` | Extended Geneva Minimalistic Acoustic Parameter Set |
-| `vocametrix_phoneme_detection` | Phoneme presence/absence detection |
+| `vocametrix_measure_sound_level` | dB SPL and intensity statistics |
+| `vocametrix_extract_egemaps` | Extended Geneva Minimalistic Acoustic Parameter Set (88 features) |
+| `vocametrix_detect_phonemes` | French phoneme detection with confidence scores and timestamps |
 | `vocametrix_classify_stuttering` | Dysfluency classification |
 
 ### AI agents
 | Tool | Description |
 |------|-------------|
-| `vocametrix_agent_interpret_metrics` | Clinical interpretation of voice metrics |
-| `vocametrix_agent_exercises` | Personalized voice/speech exercise generation |
-| `vocametrix_agent_word_list` | Target word list generation for therapy |
-| `vocametrix_agent_therapist_chat` | Conversational AI speech-language therapist |
-| `vocametrix_agent_french_ipa` | French text → IPA phonetic transcription |
-| `vocametrix_agent_spell` | Spelling correction agent |
-| `vocametrix_agent_syntax` | Syntax checking agent |
-| `vocametrix_agent_vocabulary_tutor` | Vocabulary tutoring agent |
-| `vocametrix_agent_adaptive_exercise` | Adaptive exercise generation |
+| `vocametrix_interpret_voice_metrics` | Clinical interpretation of voice metrics |
+| `vocametrix_generate_exercises` | Personalized voice/speech exercise generation |
+| `vocametrix_generate_word_list` | Target word list generation for therapy |
+| `vocametrix_chat_speech_therapist` | Conversational AI speech-language therapist |
+| `vocametrix_convert_french_to_ipa` | French text → IPA phonetic transcription |
+| `vocametrix_interpret_spelling_attempt` | Spelling correction agent |
+| `vocametrix_check_syntax` | Syntax checking agent |
+| `vocametrix_vocabulary_tutor` | Vocabulary tutoring agent |
+| `vocametrix_adapt_exercise` | Adaptive exercise generation |
 
 ### Therapy planning
 | Tool | Description |
@@ -106,12 +105,13 @@ See [ChatGPT setup and release checks](docs/chatgpt-api.md) for the matching pla
 | Tool | Description |
 |------|-------------|
 | `vocametrix_full_voice_assessment` | Parallel AVQI + CPP + HNR + jitter/shimmer + spectral |
-| `vocametrix_batch_pronunciation` | Assess a folder of WAV files |
+| `vocametrix_batch_pronunciation` | Assess a folder of WAV files. Reads the server's own filesystem, so it is only registered in stdio/local mode (`VOCAMETRIX_MCP_LOCAL_FS=1`) — not available on the hosted server |
 | `vocametrix_full_therapy_workflow` | Generate → poll → fetch → approval flow |
 
 ## Resources
 
 - `vocametrix://docs/api` — API quick reference (auth, rate limits, audio requirements, error codes)
+- `vocametrix://recording-guide` — Recording protocols for every tool (sustained vowel, connected speech with language-specific reference sentences, glissando, sustained /s/ and /z/)
 - `vocametrix://thresholds/{metric}` — Clinical reference thresholds for `avqi`, `dsi`, `cpp`, `hnr`, `jitter-shimmer`, `gne`
 
 ## Prompts
@@ -155,7 +155,7 @@ The `audioPath` parameter accepts several input types, but **which ones are vali
 ## Development
 
 ```bash
-git clone https://github.com/pmarmaroli/vocametrix-mcp.git
+git clone https://github.com/Vocametrix/vocametrix-mcp.git
 cd vocametrix-mcp
 npm install
 npm run build
@@ -172,9 +172,9 @@ Listed in the official [MCP Registry](https://registry.modelcontextprotocol.io/)
 The Vocametrix ecosystem:
 
 - 📘 **[Vocametrix API documentation](https://www.vocametrix.com/api-docs)** — full reference for the underlying REST API powering this MCP server.
-- 📐 **[OpenAPI 3.1 specification](https://www.vocametrix.com/openapi.json)** — machine-readable schema for all 48 endpoints.
-- 🐍 **[vocametrix-python](https://github.com/pmarmaroli/vocametrix-python)** — official Python SDK if you want direct API access from Python (`pip install vocametrix`).
-- 🟦 **[vocametrix-js](https://github.com/pmarmaroli/vocametrix-js)** — official TypeScript / JavaScript SDK used internally by this MCP server (`npm install vocametrix`).
+- 📐 **[OpenAPI 3.1 specification](https://www.vocametrix.com/openapi.json)** — machine-readable schema for all 49 endpoints.
+- 🐍 **[vocametrix-python](https://github.com/Vocametrix/vocametrix-python)** — official Python SDK if you want direct API access from Python (`pip install vocametrix`).
+- 🟦 **[vocametrix-js](https://github.com/Vocametrix/vocametrix-js)** — official TypeScript / JavaScript SDK used internally by this MCP server (`npm install vocametrix`).
 
 ## License
 

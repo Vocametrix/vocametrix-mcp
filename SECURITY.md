@@ -4,7 +4,7 @@
 
 Please report security issues privately, not as a public GitHub issue.
 
-- **Preferred:** [open a private security advisory](https://github.com/pmarmaroli/vocametrix-mcp/security/advisories/new) on this repository.
+- **Preferred:** [open a private security advisory](https://github.com/Vocametrix/vocametrix-mcp/security/advisories/new) on this repository.
 - **Email:** info@vocametrix.com
 
 Please include enough detail to reproduce the issue — the affected file and
