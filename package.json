@@ -1,6 +1,6 @@
 {
   "name": "@vocametrix/mcp-server",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "mcpName": "io.github.pmarmaroli/vocametrix-mcp",
   "description": "Official MCP server for the Vocametrix voice analysis API",
   "type": "module",
