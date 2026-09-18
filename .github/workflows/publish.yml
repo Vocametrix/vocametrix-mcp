@@ -8,6 +8,11 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    # NPM_TOKEN lives in this environment, not in the repository secrets, and
+    # the environment requires a reviewer. Pushing a v* tag therefore stops
+    # here and waits for an explicit approval before anything reaches npm — a
+    # stolen GitHub token is not enough to publish under this name.
+    environment: npm
     permissions:
       contents: read
       id-token: write
