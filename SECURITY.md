@@ -34,3 +34,9 @@ the Vocametrix API at `platform.vocametrix.com` and the web application at
 
 Only the latest published version of `@vocametrix/mcp-server` receives security
 fixes.
+
+## Acknowledgments
+
+We credit security researchers in advisory disclosures and release notes. Recent credits:
+
+- **Syed Anas Mohiuddin** ([@SyedAnas01](https://github.com/SyedAnas01), maintainer of [mcp-safeguard](https://github.com/SyedAnas01/mcp-safeguard)) — reported SSRF in audio URL validation (CWE-918), with verified proof of concept and detailed fix review.
