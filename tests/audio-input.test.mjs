@@ -241,3 +241,15 @@ test("SSRF guard — a public address is still allowed through", () => {
   assert.equal(isBlockedAddress("2606:2800:220:1:248:1893:25c8:1946"), false);
   assert.equal(isBlockedAddress("169.254.169.254"), true);
 });
+
+test("only real audio containers pass the base64 upload check", async () => {
+  const { looksLikeAudio } = await import("../dist/client.js");
+  const pad = (head) => Buffer.concat([Buffer.from(head, "latin1"), Buffer.alloc(64)]);
+  assert.equal(looksLikeAudio(Buffer.from("PLACEHOLDER", "base64")), false);
+  assert.equal(looksLikeAudio(pad("hello, this is plain text and not a recording")), false);
+  const wav = Buffer.alloc(64); wav.write("RIFF", 0, "latin1"); wav.write("WAVE", 8, "latin1");
+  assert.equal(looksLikeAudio(wav), true);
+  assert.equal(looksLikeAudio(pad("ID3")), true);
+  assert.equal(looksLikeAudio(pad("fLaC")), true);
+  assert.equal(looksLikeAudio(pad("OggS")), true);
+});

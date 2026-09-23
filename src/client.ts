@@ -1,4 +1,4 @@
-import { VocametrixClient } from "vocametrix";
+import { VocametrixClient, VocametrixValidationError } from "vocametrix";
 import { resolveAudioInputToBuffer } from "./utils/audio-input.js";
 import { ApiHttpError } from "./errors.js";
 
@@ -98,6 +98,15 @@ export function createClient(explicitKey?: string): ApiClient {
       const data = base64.startsWith("data:")
         ? Buffer.from(base64.slice(base64.indexOf(",") + 1), "base64")
         : Buffer.from(base64, "base64");
+      // A model that cannot read an attachment tends to send a stand-in string
+      // ("PLACEHOLDER"). Storing it would yield a blob every analysis rejects
+      // with a 500, after the model has already told the user the upload worked.
+      if (!looksLikeAudio(data)) {
+        throw new VocametrixValidationError(
+          "audioBase64 does not decode to an audio file (WAV, MP3, FLAC, OGG, M4A or WebM). " +
+          "Do not send placeholders. In ChatGPT, call vocametrix_upload_attachment with the attached file instead.",
+        );
+      }
       const blobUrl = await uploadBufferToBlob(data);
       return { blobUrl };
     },
@@ -118,4 +127,17 @@ export function createClient(explicitKey?: string): ApiClient {
       });
     },
   };
+}
+
+/** Recognises the container signatures of the audio formats the platform accepts. */
+export function looksLikeAudio(data: Buffer): boolean {
+  if (data.length < 44) return false;
+  const ascii = (start: number, end: number) => data.toString("latin1", start, end);
+  return (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WAVE")
+    || ascii(0, 3) === "ID3"
+    || (data[0] === 0xff && (data[1]! & 0xe0) === 0xe0)
+    || ascii(0, 4) === "fLaC"
+    || ascii(0, 4) === "OggS"
+    || ascii(4, 8) === "ftyp"
+    || data.readUInt32BE(0) === 0x1a45dfa3;
 }
