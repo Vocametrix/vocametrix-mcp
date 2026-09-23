@@ -13,9 +13,10 @@ export function ok(data: unknown) {
 /**
  * Reads and returns; changes nothing and costs nothing. A client may replay it
  * freely, which is exactly why an analysis that spends the account's credits
- * must not claim it.
+ * must not claim it. destructiveHint is spelled out because the ChatGPT plugin
+ * review asks for every hint explicitly, even where the MCP spec ignores it.
  */
-export const READONLY_TOOL = { readOnlyHint: true, idempotentHint: true, openWorldHint: true } as const;
+export const READONLY_TOOL = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
 
 /**
  * Runs an analysis: it destroys nothing, but it uploads the recording, spends

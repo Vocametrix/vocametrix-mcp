@@ -86,3 +86,14 @@ test("tools that change nothing are not announced as destructive", async (t) => 
   assert.deepEqual(destructive, ["vocametrix_approve_therapy_plan"],
     "only plan rejection actually destroys anything");
 });
+
+test("every tool states each hint the ChatGPT review asks for", async (t) => {
+  // The plugin portal refuses to submit a tool that leaves a hint implicit,
+  // including destructiveHint on read-only tools.
+  const tools = await listTools(await launch(t, { localFilesystem: false }));
+  const missing = tools.flatMap((tool) =>
+    ["readOnlyHint", "destructiveHint", "openWorldHint"]
+      .filter((hint) => typeof tool.annotations?.[hint] !== "boolean")
+      .map((hint) => `${tool.name}.${hint}`));
+  assert.deepEqual(missing, []);
+});
