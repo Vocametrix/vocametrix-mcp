@@ -97,3 +97,20 @@ test("every tool states each hint the ChatGPT review asks for", async (t) => {
       .map((hint) => `${tool.name}.${hint}`));
   assert.deepEqual(missing, []);
 });
+
+test("ChatGPT attachments reach the hosted server as a file parameter", async (t) => {
+  // ChatGPT only passes an attachment when the tool lists the parameter in
+  // openai/fileParams and its schema matches the Apps SDK file object exactly.
+  const hosted = await listTools(await launch(t, { localFilesystem: false }));
+  const tool = hosted.find((x) => x.name === "vocametrix_upload_attachment");
+  assert.ok(tool, "published on the hosted server");
+  assert.deepEqual(tool._meta?.["openai/fileParams"], ["file"]);
+  const file = tool.inputSchema.properties.file;
+  assert.deepEqual(Object.keys(file.properties).sort(), ["download_url", "file_id", "file_name", "mime_type"]);
+  assert.deepEqual([...file.required].sort(), ["download_url", "file_id"]);
+  assert.equal(file.additionalProperties, false);
+
+  const local = await listTools(await launch(t, { localFilesystem: true }));
+  assert.equal(local.find((x) => x.name === "vocametrix_upload_attachment"), undefined,
+    "no client sends file parameters to a local server");
+});

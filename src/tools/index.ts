@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ApiClient } from "../client.js";
 import { localFilesystemEnabled } from "../utils/audio-input.js";
-import { registerUploadTool } from "./atomic/upload.js";
+import { registerUploadTool, registerUploadAttachmentTool } from "./atomic/upload.js";
 import { registerIngestUrlTool } from "./atomic/ingest.js";
 import { registerVoiceQualityTools } from "./atomic/voice-quality.js";
 import { registerAdvancedVoiceTools } from "./atomic/advanced-voice.js";
@@ -15,6 +15,8 @@ import { registerFullTherapyWorkflow } from "./workflows/full-therapy-workflow.j
 
 export function registerAllTools(server: McpServer, client: ApiClient): void {
   registerUploadTool(server, client);
+  // Only ChatGPT sends file parameters, and only to the hosted server.
+  if (!localFilesystemEnabled()) registerUploadAttachmentTool(server, client);
   registerIngestUrlTool(server, client);
   registerVoiceQualityTools(server, client);
   registerAdvancedVoiceTools(server, client);
