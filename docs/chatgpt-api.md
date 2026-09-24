@@ -410,6 +410,16 @@ Pinned by `tests/published-surface.test.mjs`. The quota-exhausted message no
 longer says "Add credits": the guidelines forbid selling credits through the
 app, and allow only a link to an informational plans page.
 
+**Public host moved to `mcp.vocametrix.com`, 24 September 2026.** Railway still
+hosts the server; GoDaddy DNS has a CNAME `mcp` to `xl6iajbt.up.railway.app`
+plus Railway's `_railway-verify.mcp` TXT. `MCP_OAUTH_RESOURCE` is now
+`https://mcp.vocametrix.com/chatgpt/mcp` on both Railway and the Azure web app
+`webapp-platform-vocametrix`. Tokens are bound to the resource, so every
+ChatGPT connection made against the old Railway host stopped working and must
+be reconnected. Version 1.0.0 was moved back to draft first, since its reviewers
+would have hit that failure. Railway stages variable edits: nothing changes
+until the pending change is deployed.
+
 ## Public submission remains separate
 
 Prepare the verified publisher identity, real logo, descriptions, support and
