@@ -62,7 +62,7 @@ function describeHttpError(err: ApiHttpError): string {
     case 429:
       return "No Vocametrix API credits remaining on the connected account, so this " +
         "analysis was not run and nothing was charged.\n" +
-        "Add credits at https://www.vocametrix.com/pricing";
+        "Available plans are described at https://www.vocametrix.com/pricing";
     default:
       return err.statusCode >= 500
         ? `Vocametrix server error (${String(err.statusCode)}). Try again shortly.`

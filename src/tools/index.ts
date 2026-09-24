@@ -13,7 +13,7 @@ import { registerFullVoiceAssessment } from "./workflows/full-voice-assessment.j
 import { registerBatchPronunciation } from "./workflows/batch-pronunciation.js";
 import { registerFullTherapyWorkflow } from "./workflows/full-therapy-workflow.js";
 
-export function registerAllTools(server: McpServer, client: ApiClient): void {
+export function registerAllTools(server: McpServer, client: ApiClient, { chatgpt = false } = {}): void {
   registerUploadTool(server, client);
   // Only ChatGPT sends file parameters, and only to the hosted server.
   if (!localFilesystemEnabled()) registerUploadAttachmentTool(server, client);
@@ -23,11 +23,14 @@ export function registerAllTools(server: McpServer, client: ApiClient): void {
   registerCoreSpeechTools(server, client);
   registerAudioMeasureTools(server, client);
   registerAiAgentTools(server, client);
-  registerTherapyTools(server, client);
+  // Therapy planning takes a patient identifier and clinical history, which
+  // the ChatGPT app guidelines class as protected health information. Those
+  // tools stay available to clients the user runs or connects directly.
+  if (!chatgpt) registerTherapyTools(server, client);
   registerFullVoiceAssessment(server, client);
   // Reads a folder from disk, so it only makes sense where that disk is the
   // user's. On the hosted server it would enumerate the server's filesystem
   // instead, which is why it is not published there at all.
   if (localFilesystemEnabled()) registerBatchPronunciation(server, client);
-  registerFullTherapyWorkflow(server, client);
+  if (!chatgpt) registerFullTherapyWorkflow(server, client);
 }

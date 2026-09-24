@@ -25,9 +25,9 @@ if (cliArgs.includes("--setup")) {
 
 const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
 
-function buildServer(client: ReturnType<typeof createClient>) {
+function buildServer(client: ReturnType<typeof createClient>, chatgpt = false) {
   const server = new McpServer({ name: "vocametrix", version });
-  registerAllTools(server, client);
+  registerAllTools(server, client, { chatgpt });
   registerResources(server);
   registerPrompts(server);
   return server;
@@ -58,7 +58,8 @@ async function handleMcpRequest(req: IncomingMessage, res: ServerResponse, oauth
   }
 
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-  const mcpServer = buildServer(client);
+  // Only the ChatGPT endpoint authenticates through OAuth.
+  const mcpServer = buildServer(client, oauthApiKey !== undefined);
   await mcpServer.connect(transport);
   res.on("close", () => { void mcpServer.close(); });
 

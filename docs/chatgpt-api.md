@@ -400,6 +400,16 @@ credits. The annotations now carry that (`readOnlyHint: false`,
 `idempotentHint: false`), which is what the review checks; wording it in 29
 descriptions is a separate, larger edit.
 
+**Resolved for ChatGPT, 24 September 2026.** Decisions two and four are settled
+by not publishing therapy planning to ChatGPT at all. The five therapy tools are
+left out of `/chatgpt/mcp` (still served over stdio and `/mcp`), because the app
+guidelines list protected health information among the data an app must not
+collect. That removes `patient_id`, the anamnesis and the raw
+`output_file`/`html_clinician_final` paths from the ChatGPT surface in one step.
+Pinned by `tests/published-surface.test.mjs`. The quota-exhausted message no
+longer says "Add credits": the guidelines forbid selling credits through the
+app, and allow only a link to an informational plans page.
+
 ## Public submission remains separate
 
 Prepare the verified publisher identity, real logo, descriptions, support and

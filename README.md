@@ -94,6 +94,8 @@ See [ChatGPT setup and release checks](docs/chatgpt-api.md) for the matching pla
 | `vocametrix_adapt_exercise` | Adaptive exercise generation |
 
 ### Therapy planning
+Not published on the ChatGPT endpoint (`/chatgpt/mcp`): these tools take a patient identifier and clinical history, which the ChatGPT app guidelines treat as protected health information. They remain available over stdio and `/mcp`.
+
 | Tool | Description |
 |------|-------------|
 | `vocametrix_generate_therapy_plan` | Generate an AI therapy plan |

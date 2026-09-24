@@ -11,11 +11,27 @@ import { createServer } from "node:net";
 // than against the source, since registration is conditional. No network calls
 // leave the child process and no API credits are spent.
 
-async function launch(t, { localFilesystem }) {
+const OAUTH = {
+  MCP_OAUTH_RESOURCE: "https://mcp.example.test/chatgpt/mcp",
+  MCP_OAUTH_ISSUER: "https://platform.example.test",
+  MCP_OAUTH_INTROSPECTION_SECRET: "synthetic-introspection-secret-for-tests",
+};
+
+async function launch(t, { localFilesystem, oauth = false }) {
   const directory = await mkdtemp(join(tmpdir(), "vocametrix-surface-"));
   const preload = join(directory, "fixture.mjs");
   await writeFile(preload, `
-    globalThis.fetch = async () => { throw new Error('Unexpected network call in offline test'); };
+    globalThis.fetch = async (url) => {
+      // Synthetic introspection so the ChatGPT endpoint can be listed offline.
+      if (String(url) === ${JSON.stringify(OAUTH.MCP_OAUTH_ISSUER + "/oauth/mcp/introspect")}) {
+        return new Response(JSON.stringify({
+          active: true, issuer: ${JSON.stringify(OAUTH.MCP_OAUTH_ISSUER)}, audience: ${JSON.stringify(OAUTH.MCP_OAUTH_RESOURCE)},
+          scope: "vocametrix:api", subject: "fixture-user", apiKey: "fixture-oauth-key",
+          expiresAt: Math.floor(Date.now() / 1000) + 900,
+        }));
+      }
+      throw new Error('Unexpected network call in offline test');
+    };
   `);
   const listener = createServer();
   await new Promise((resolve) => listener.listen(0, "127.0.0.1", resolve));
@@ -23,6 +39,7 @@ async function launch(t, { localFilesystem }) {
   await new Promise((resolve) => listener.close(resolve));
   const env = { ...process.env, PORT: String(port), VOCAMETRIX_API_KEY: "fixture-owner-key" };
   for (const name of Object.keys(env)) if (name.startsWith("MCP_OAUTH_")) delete env[name];
+  if (oauth) Object.assign(env, OAUTH);
   if (localFilesystem) env.VOCAMETRIX_MCP_LOCAL_FS = "1";
   else delete env.VOCAMETRIX_MCP_LOCAL_FS;
   const child = spawn(process.execPath, ["--import", pathToFileURL(preload).href, "dist/server.js"], { env, stdio: ["ignore", "pipe", "pipe"] });
@@ -43,10 +60,13 @@ async function launch(t, { localFilesystem }) {
   return `http://127.0.0.1:${port}`;
 }
 
-async function listTools(base) {
-  const response = await fetch(base + "/mcp", {
+async function listTools(base, path = "/mcp") {
+  const response = await fetch(base + path, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+    headers: {
+      "Content-Type": "application/json", Accept: "application/json, text/event-stream",
+      ...(path === "/mcp" ? {} : { Authorization: "Bearer fixture-token" }),
+    },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
   });
   const text = await response.text();
@@ -62,6 +82,22 @@ test("a tool that reads the filesystem is not published on the hosted server", a
   const local = await listTools(await launch(t, { localFilesystem: true }));
   assert.ok(local.find((tool) => tool.name === "vocametrix_batch_pronunciation"),
     "still available where the filesystem belongs to the user");
+});
+
+test("therapy planning is not published to ChatGPT", async (t) => {
+  // It takes a patient identifier and clinical history: protected health
+  // information under the ChatGPT app guidelines.
+  const therapy = [
+    "vocametrix_generate_therapy_plan", "vocametrix_get_therapy_status", "vocametrix_get_therapy_result",
+    "vocametrix_approve_therapy_plan", "vocametrix_full_therapy_workflow",
+  ];
+  const base = await launch(t, { localFilesystem: false, oauth: true });
+  const chatgpt = (await listTools(base, "/chatgpt/mcp")).map((tool) => tool.name);
+  assert.ok(chatgpt.length > 0, "the ChatGPT endpoint still lists its tools");
+  assert.deepEqual(therapy.filter((name) => chatgpt.includes(name)), []);
+
+  const direct = (await listTools(base)).map((tool) => tool.name);
+  assert.deepEqual(therapy.filter((name) => !direct.includes(name)), [], "still published on /mcp");
 });
 
 test("no billed tool invites the client to replay it for free", async (t) => {
