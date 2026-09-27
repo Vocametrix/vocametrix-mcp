@@ -28,6 +28,22 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 Get an API key at [vocametrix.com/registration](https://www.vocametrix.com/registration). MCP analysis uses purchased API credits; the website subscription and trial do not cover API calls.
 
+### Claude Code
+
+Hosted server (no local install):
+
+```bash
+claude mcp add --transport http vocametrix https://mcp.vocametrix.com/mcp --header "x-api-key: your-api-key-here"
+```
+
+Or run it locally with npx:
+
+```bash
+claude mcp add vocametrix -e VOCAMETRIX_API_KEY=your-api-key-here -- npx -y @vocametrix/mcp-server
+```
+
+Add `--scope user` right after `claude mcp add` to make Vocametrix available in all your projects. Then type `/mcp` in Claude Code to check the connection.
+
 ### ChatGPT (OAuth, API credits)
 
 The optional `/chatgpt/mcp` endpoint links a user's API account through OAuth. The user approves access on the platform's consent page; ChatGPT receives revocable tokens, not the API key. Existing `/mcp` API-key clients and local stdio clients remain supported.
