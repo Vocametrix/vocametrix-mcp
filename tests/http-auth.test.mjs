@@ -22,7 +22,7 @@ async function launch(t, oauth) {
           issuer: 'https://platform.example.test', expiresAt: Date.now() / 1000 + 900,
         });
       }
-      if (url === 'https://platform.vocametrix.com/api/spell-agent') {
+      if (url === 'https://platform.vocametrix.com/api/syntax-checker-agent') {
         return Response.json({ fixture: true, key: init.headers['X-API-Key'],
           webSession: init.headers['X-Web-Session'] ?? null });
       }
@@ -68,7 +68,7 @@ async function rpc(base, path, method, headers = {}, params) {
   return { response, data: payload ? JSON.parse(payload) : null };
 }
 
-const tool = { name: "vocametrix_interpret_spelling_attempt", arguments: { transcription: "c a t", targetWord: "cat" } };
+const tool = { name: "vocametrix_check_syntax", arguments: { text: "The cat sit.", locale: "en-US" } };
 
 test("legacy anonymous HTTP discovery never inherits the server owner's API key", async (t) => {
   const base = await launch(t, false);

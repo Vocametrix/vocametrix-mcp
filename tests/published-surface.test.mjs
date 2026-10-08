@@ -100,6 +100,30 @@ test("therapy planning is not published to ChatGPT", async (t) => {
   assert.deepEqual(therapy.filter((name) => !direct.includes(name)), [], "still published on /mcp");
 });
 
+test("ChatGPT gets only the language-learning scope, worded without clinical terms", async (t) => {
+  // OpenAI rejected 1.0.0 on 8 October 2026 as a healthcare use case. The
+  // ChatGPT endpoint publishes an allowlist, so a new clinical tool cannot
+  // reach it by default; /mcp and stdio keep the full surface.
+  const scope = [
+    "vocametrix_upload_audio", "vocametrix_upload_attachment", "vocametrix_ingest_url",
+    "vocametrix_assess_pronunciation", "vocametrix_assess_pronunciation_with_pitch",
+    "vocametrix_transcribe_audio", "vocametrix_synthesize_speech",
+    "vocametrix_calculate_prosody_similarity", "vocametrix_measure_sound_level",
+    "vocametrix_detect_phonemes", "vocametrix_convert_french_to_ipa",
+    "vocametrix_check_syntax", "vocametrix_vocabulary_tutor",
+  ];
+  const base = await launch(t, { localFilesystem: false, oauth: true });
+  const chatgpt = await listTools(base, "/chatgpt/mcp");
+  assert.deepEqual(chatgpt.map((tool) => tool.name).sort(), [...scope].sort());
+
+  const clinical = /patient|clinic|therap|patholog|dysphoni|stutter|diagnos|disorder|medical/i;
+  const worded = chatgpt.filter((tool) => clinical.test(JSON.stringify(tool))).map((tool) => tool.name);
+  assert.deepEqual(worded, [], `clinical wording reaches ChatGPT in: ${worded.join(", ")}`);
+
+  const direct = (await listTools(base)).map((tool) => tool.name);
+  assert.ok(direct.includes("vocametrix_calculate_avqi"), "clinical tools stay on /mcp");
+});
+
 test("no billed tool invites the client to replay it for free", async (t) => {
   // readOnlyHint plus idempotentHint says "costs nothing, repeat at will".
   // Only the two therapy lookups may say that; everything else spends credits.

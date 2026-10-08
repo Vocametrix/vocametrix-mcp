@@ -12,8 +12,10 @@ import { registerTherapyTools } from "./atomic/therapy.js";
 import { registerFullVoiceAssessment } from "./workflows/full-voice-assessment.js";
 import { registerBatchPronunciation } from "./workflows/batch-pronunciation.js";
 import { registerFullTherapyWorkflow } from "./workflows/full-therapy-workflow.js";
+import { chatgptScope } from "./chatgpt-scope.js";
 
-export function registerAllTools(server: McpServer, client: ApiClient, { chatgpt = false } = {}): void {
+export function registerAllTools(mcpServer: McpServer, client: ApiClient, { chatgpt = false } = {}): void {
+  const server = chatgpt ? chatgptScope(mcpServer) : mcpServer;
   registerUploadTool(server, client);
   // Only ChatGPT sends file parameters, and only to the hosted server.
   if (!localFilesystemEnabled()) registerUploadAttachmentTool(server, client);

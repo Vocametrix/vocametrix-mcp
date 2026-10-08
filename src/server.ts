@@ -28,8 +28,12 @@ const { version } = createRequire(import.meta.url)("../package.json") as { versi
 function buildServer(client: ReturnType<typeof createClient>, chatgpt = false) {
   const server = new McpServer({ name: "vocametrix", version });
   registerAllTools(server, client, { chatgpt });
-  registerResources(server);
-  registerPrompts(server);
+  // Both are written for clinicians (thresholds, therapy reports), which is
+  // the healthcare scope OpenAI does not accept on ChatGPT.
+  if (!chatgpt) {
+    registerResources(server);
+    registerPrompts(server);
+  }
   return server;
 }
 
