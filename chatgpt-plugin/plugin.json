@@ -1,0 +1,92 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "vocametrix",
+  "version": "1.0.1",
+  "description": "Pronunciation practice, speech transcription, text-to-speech and language-learning tools.",
+  "author": {
+    "name": "Vocametrix OÜ",
+    "url": "https://www.vocametrix.com"
+  },
+  "homepage": "https://www.vocametrix.com",
+  "repository": "https://github.com/Vocametrix/vocametrix-mcp",
+  "license": "MIT",
+  "keywords": ["pronunciation", "language learning", "speech", "text-to-speech", "IPA"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Vocametrix",
+        "shortDescription": "Practise pronunciation",
+        "longDescription": "Vocametrix helps you practise pronunciation and speaking in ChatGPT. Attach a recording to get phoneme-level pronunciation scores against a reference text (accuracy, fluency, completeness, prosody) in 30+ languages, compare your intonation and rhythm with a model recording, transcribe speech, and hear any text read aloud by a natural voice. You can also convert French to IPA, detect French phonemes, check the grammar of your writing, and build vocabulary with a conversational tutor. Requires a Vocametrix account.",
+        "developerName": "Vocametrix OÜ",
+        "category": "Education",
+        "capabilities": [],
+        "websiteURL": "https://www.vocametrix.com",
+        "supportURL": "https://www.vocametrix.com/support",
+        "privacyPolicyURL": "https://www.vocametrix.com/privacy",
+        "termsOfServiceURL": "https://www.vocametrix.com/terms",
+        "defaultPrompt": [
+          "Score my pronunciation of this sentence.",
+          "Read 'Bonjour, comment allez-vous ?' aloud with a French voice.",
+          "Give me the IPA for the French words grenouille and écureuil."
+        ],
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/logo.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Score the pronunciation of an attached recording against a reference text",
+              "prompt": "Here is a recording of me reading 'The quick brown fox jumps over the lazy dog.' How good is my English pronunciation?",
+              "tools_triggered": "vocametrix_upload_attachment, vocametrix_assess_pronunciation",
+              "expected_behavior": "The attached recording is uploaded, then scored against the reference sentence. ChatGPT reports accuracy, fluency, completeness and prosody scores (0-100) and points out the words or phonemes that scored lowest. The reviewer attaches a WAV of themselves reading the sentence."
+            },
+            {
+              "description": "Read a sentence aloud in the language it is written in",
+              "prompt": "Read 'Bonjour, comment allez-vous ?' aloud with a French voice.",
+              "tools_triggered": "vocametrix_synthesize_speech",
+              "expected_behavior": "A short audio clip of the sentence spoken by a French neural voice (fr-FR) is returned and can be played in the conversation."
+            },
+            {
+              "description": "Convert French words to IPA",
+              "prompt": "Give me the IPA transcription of the French words grenouille and écureuil, with syllable marks.",
+              "tools_triggered": "vocametrix_convert_french_to_ipa",
+              "expected_behavior": "Each word is returned with its IPA transcription and syllable boundaries."
+            },
+            {
+              "description": "Check the grammar of a sentence written by a learner",
+              "prompt": "I'm learning English. Check the grammar of: 'She don't like apples and yesterday he go to school.'",
+              "tools_triggered": "vocametrix_check_syntax",
+              "expected_behavior": "The two agreement and tense errors are listed with their severity, and a corrected sentence is returned."
+            },
+            {
+              "description": "Practise vocabulary with the tutor",
+              "prompt": "I'm a French speaker learning English. Quiz me on food vocabulary, I'm an adult.",
+              "tools_triggered": "vocametrix_vocabulary_tutor",
+              "expected_behavior": "The tutor starts a vocabulary exercise on food for an adult French speaker learning English and waits for the learner's answer."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Medical diagnosis is out of scope",
+              "prompt": "Listen to my voice recording and tell me whether I have a voice disorder."
+            },
+            {
+              "description": "Account without credits",
+              "prompt": "Connected with the account that has no credits: score my pronunciation of 'Good morning, everyone.'"
+            },
+            {
+              "description": "Unrelated request",
+              "prompt": "Book me a table for two in a restaurant tonight."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "This plugin does not sell products or process payments. Usage is billed to the user's existing Vocametrix account."
+      },
+      "publication": {
+        "release_notes": "Refocused on pronunciation practice and language learning. Clinical voice measures, stuttering classification and therapy tools are no longer offered in ChatGPT."
+      }
+    }
+  }
+}
