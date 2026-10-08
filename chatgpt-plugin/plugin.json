@@ -81,6 +81,7 @@
             }
           ]
         },
+        "demo_recording_url": "https://vocametrixstorageaccount.blob.core.windows.net/perso/vocametrix-in-chatGPT.mp4",
         "commerce": false,
         "commerce_description": "This plugin does not sell products or process payments. Usage is billed to the user's existing Vocametrix account."
       },
