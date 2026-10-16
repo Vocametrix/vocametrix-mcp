@@ -154,8 +154,9 @@ export function registerVoiceQualityTools(server: McpServer, client: ApiClient):
   // ── VRP / Ambitus ────────────────────────────────────────────────────────────
   server.tool(
     "vocametrix_calculate_voice_range_profile",
-    "Calculate the Voice Range Profile (VRP / ambitus / glissando) from a glissando recording. " +
-    "Returns frequency range (lowest to highest pitch) and intensity range with age/gender interpretation. " +
+    "Calculate the vocal range (ambitus) from a glissando recording. " +
+    "Returns the F0 range (lowest to highest pitch) in Hz, semitones and octaves. It measures pitch only, not intensity, " +
+    "so it is not a full Voice Range Profile (phonetogram). " +
     "Useful for singers and voice rehabilitation assessment. " +
     "BEFORE CALLING: Confirm the user has a glissando recording — a continuous pitch sweep " +
     "from their lowest to highest comfortable pitch on any vowel, without stopping (5–10 s). " +

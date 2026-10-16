@@ -236,7 +236,7 @@ Used by: AVQI (required), ABI (required)
 Slide continuously from the lowest to the highest comfortable pitch on any vowel, without stopping.
 Duration: 5–10 seconds.
 
-Used by: Voice Range Profile (VRP / Ambitus)
+Used by: vocal range (ambitus, F0 only)
 
 ---
 
