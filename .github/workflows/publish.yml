@@ -4,14 +4,17 @@ on:
   push:
     tags:
       - "v*"
+  # Re-publishes the version in package.json, e.g. after a failed tag run.
+  workflow_dispatch:
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
-    # NPM_TOKEN lives in this environment, not in the repository secrets, and
-    # the environment requires a reviewer. Pushing a v* tag therefore stops
-    # here and waits for an explicit approval before anything reaches npm — a
-    # stolen GitHub token is not enough to publish under this name.
+    # npm trusts only runs of this workflow in the `npm` environment (trusted
+    # publishing, OIDC, no NPM_TOKEN), and the environment requires a reviewer.
+    # Pushing a v* tag therefore stops here and waits for an explicit approval
+    # before anything reaches npm: a stolen GitHub token is not enough to
+    # publish under this name.
     environment: npm
     permissions:
       contents: read
@@ -21,12 +24,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
           cache: "npm"
+      # Trusted publishing (OIDC) needs npm 11.5.1 or later; Node 22 ships npm 10.
+      - run: npm install -g npm@^11.5.1
       - run: npm ci
       - run: npm run build
       - name: Publish with provenance
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
