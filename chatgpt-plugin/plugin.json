@@ -78,6 +78,10 @@
               "prompt": "Listen to my voice recording and tell me whether I have a voice disorder."
             },
             {
+              "description": "Writing task with no speech or language-learning component",
+              "prompt": "Write a cover letter for a marketing manager job application."
+            },
+            {
               "description": "Unrelated request",
               "prompt": "Book me a table for two in a restaurant tonight."
             }
