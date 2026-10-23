@@ -24,7 +24,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "vocametrix": "^0.1.0",
     "zod": "^3.23.0"
   },
