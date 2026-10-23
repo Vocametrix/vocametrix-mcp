@@ -20,7 +20,7 @@ function textOf(err) {
 
 test("an exhausted quota is not reported as an unexpected error", () => {
   const text = textOf(new ApiHttpError(429, QUOTA_BODY));
-  assert.match(text, /No Vocametrix API credits remaining/);
+  assert.match(text, /no analysis time left/);
   assert.doesNotMatch(text, /Unexpected error/);
   assert.match(text, /nothing was charged/);
 });
@@ -29,6 +29,14 @@ test("the raw backend body never reaches the model", () => {
   const text = textOf(new ApiHttpError(429, QUOTA_BODY));
   assert.doesNotMatch(text, /upgrade_url/);
   assert.doesNotMatch(text, /[{}]/);
+});
+
+test("no error message points towards buying anything", () => {
+  // OpenAI's plugin guidelines forbid selling credits or subscriptions, even
+  // indirectly; the 23 October 2026 rejection cited exactly that.
+  for (const status of [401, 402, 403, 429]) {
+    assert.doesNotMatch(textOf(new ApiHttpError(status, QUOTA_BODY)), /pricing|credit|plan\b|purchase|subscri/i);
+  }
 });
 
 test("an HTML error page is not echoed back", () => {
@@ -48,7 +56,7 @@ test("a validation message is passed through, an oversized one is not", () => {
 
 test("each documented status is named rather than numbered", () => {
   assert.match(textOf(new ApiHttpError(401, "")), /API key is invalid or missing/);
-  assert.match(textOf(new ApiHttpError(402, "")), /subscription has ended/);
+  assert.match(textOf(new ApiHttpError(402, "")), /access has ended/);
   assert.match(textOf(new ApiHttpError(403, "")), /Access forbidden/);
   assert.match(textOf(new ApiHttpError(404, "")), /Resource not found/);
 });

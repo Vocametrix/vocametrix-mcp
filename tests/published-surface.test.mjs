@@ -120,6 +120,11 @@ test("ChatGPT gets only the language-learning scope, worded without clinical ter
   const worded = chatgpt.filter((tool) => clinical.test(JSON.stringify(tool))).map((tool) => tool.name);
   assert.deepEqual(worded, [], `clinical wording reaches ChatGPT in: ${worded.join(", ")}`);
 
+  // Rejected again on 23 October 2026 for commerce in digital services.
+  const commerce = /pricing|credit|purchase|subscri|billed/i;
+  const selling = chatgpt.filter((tool) => commerce.test(JSON.stringify(tool))).map((tool) => tool.name);
+  assert.deepEqual(selling, [], `commerce wording reaches ChatGPT in: ${selling.join(", ")}`);
+
   const direct = (await listTools(base)).map((tool) => tool.name);
   assert.ok(direct.includes("vocametrix_calculate_avqi"), "clinical tools stay on /mcp");
 });

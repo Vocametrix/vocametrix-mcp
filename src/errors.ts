@@ -52,17 +52,17 @@ function describeHttpError(err: ApiHttpError): string {
       return "Authentication failed: your API key is invalid or missing.\n" +
         "Get a key at https://www.vocametrix.com/registration";
     case 402:
-      return "This account's website subscription has ended.\n" +
-        "See https://www.vocametrix.com/pricing";
+      return "This Vocametrix account's access has ended, so this analysis was not run.";
     case 403:
-      return `Access forbidden${detail ? `: ${detail}` : ": your account does not have permission for this operation."}\n` +
-        "Check your plan at https://www.vocametrix.com/pricing";
+      // The backend's own 403 text can say "Purchase more", so it is not relayed.
+      return "Access forbidden: your account does not have permission for this operation.";
     case 404:
       return `Resource not found${detail ? `: ${detail}` : "."}`;
     case 429:
-      return "No Vocametrix API credits remaining on the connected account, so this " +
-        "analysis was not run and nothing was charged.\n" +
-        "Available plans are described at https://www.vocametrix.com/pricing";
+      // No link to the pricing page: OpenAI rejected the ChatGPT plugin on
+      // 23 October 2026 for steering users towards buying credits.
+      return "The connected Vocametrix account has no analysis time left, so this " +
+        "analysis was not run and nothing was charged.";
     default:
       return err.statusCode >= 500
         ? `Vocametrix server error (${String(err.statusCode)}). Try again shortly.`
@@ -84,8 +84,7 @@ export function translateError(err: unknown): McpToolError {
       "Get a key at https://www.vocametrix.com/registration";
   } else if (err instanceof VocametrixForbiddenError) {
     message =
-      "Access forbidden: your account does not have permission for this operation.\n" +
-      "Check your plan at https://www.vocametrix.com/pricing";
+      "Access forbidden: your account does not have permission for this operation.";
   } else if (err instanceof VocametrixRateLimitError) {
     const wait = err.retryAfter ? ` Retry in ${String(err.retryAfter)} seconds.` : "";
     message = `Rate limit reached.${wait} The SDK retries automatically up to 3 times.`;
