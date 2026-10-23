@@ -9,8 +9,9 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
   // ── Sound Level ──────────────────────────────────────────────────────────────
   server.tool(
     "vocametrix_measure_sound_level",
-    "Measure sound level in dB SPL over a specified time window in an audio file. " +
-    "Useful for environmental noise assessment, vocal loudness measurement, and calibration tasks. " +
+    "Measure the sound level over a specified time window in an audio file, in uncalibrated dB " +
+    "(digital full scale is taken as 94 dB, whatever the microphone). Not an absolute SPL: compare values only " +
+    "across recordings made with the same device at the same distance, never between devices or people. " +
     "Note: startSec must be > 0 (use 0.001 for the start of the file).",
     {
       audioPath: audioPath,
@@ -29,11 +30,11 @@ export function registerAudioMeasureTools(server: McpServer, client: ApiClient):
     },
   ).update({ outputSchema: GENERIC_OUTPUT_SCHEMA });
 
-  // ── eGeMAPS ─────────────────────────────────────────────────────────────────
+  // ── GeMAPS ──────────────────────────────────────────────────────────────────
   server.tool(
     "vocametrix_extract_egemaps",
-    "Extract the full openSMILE eGeMAPSv02 feature set (88 acoustic features) from a sustained vowel. " +
-    "Features include F0, jitter, shimmer, HNR, MFCCs, formants, spectral flux, and loudness. " +
+    "Extract the openSMILE GeMAPS v01b feature set (62 acoustic features, plus speech and silence percentage) " +
+    "from a sustained vowel. Features include F0, jitter, shimmer, HNR, formants, spectral slope and loudness. " +
     "Commonly used as input to machine-learning voice pathology classifiers. " +
     "BEFORE CALLING: Confirm the user has a sustained vowel recording " +
     "(/a/ held at comfortable pitch for 3+ s, minimal background noise). " +

@@ -91,8 +91,8 @@ See [ChatGPT setup and release checks](docs/chatgpt-api.md) for the matching pla
 ### Audio measures
 | Tool | Description |
 |------|-------------|
-| `vocametrix_measure_sound_level` | dB SPL and intensity statistics |
-| `vocametrix_extract_egemaps` | Extended Geneva Minimalistic Acoustic Parameter Set (88 features) |
+| `vocametrix_measure_sound_level` | Sound level in uncalibrated dB over a time window |
+| `vocametrix_extract_egemaps` | Geneva Minimalistic Acoustic Parameter Set, GeMAPS v01b (62 features) |
 | `vocametrix_detect_phonemes` | French phoneme detection with confidence scores and timestamps |
 | `vocametrix_classify_stuttering` | Dysfluency classification |
 
