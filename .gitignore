@@ -6,3 +6,6 @@ dist/
 *.log
 *yml
 landing-snapshot.md
+
+# Promo video project (Remotion): rendered MP4s and sources kept locally, not versioned
+media/
