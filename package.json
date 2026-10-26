@@ -5,7 +5,7 @@
   "description": "Official MCP server for the Vocametrix voice analysis API",
   "type": "module",
   "bin": {
-    "vocametrix-mcp": "./dist/server.js"
+    "vocametrix-mcp": "dist/server.js"
   },
   "exports": {
     ".": "./dist/server.js"
