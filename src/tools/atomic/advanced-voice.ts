@@ -211,4 +211,32 @@ export function registerAdvancedVoiceTools(server: McpServer, client: ApiClient)
       } catch (e) { return translateError(e); }
     },
   ).update({ outputSchema: GENERIC_OUTPUT_SCHEMA });
+
+  // ── Diadochokinesis (pa-ta-ka) ───────────────────────────────────────────────
+  server.tool(
+    "vocametrix_measure_ddk",
+    "Oral diadochokinesis: count the syllables of a pa / ta / ka / pataka repetition and return " +
+    "the syllable rate (first 9 syllables and overall), regularity (COV, nPVI) and acceleration. " +
+    "With gender and an age of 65 to 86, the rate is compared with Pierce et al. 2013 norms for " +
+    "healthy adults; outside that age range there is no published norm. Regularity and acceleration " +
+    "have no validated cut-off: do not present them as normal or abnormal. " +
+    "BEFORE CALLING: Confirm the recording is a repetition of the chosen task, at least 5 s, " +
+    "as fast as possible (or, for pa_steady, /pa/ repeated 30+ times at a regular comfortable pace).",
+    {
+      audioPath: audioPath.describe("Recording of the syllable repetition"),
+      task: z.enum(["pa", "ta", "ka", "pataka", "pa_steady"]).describe("Task performed: pa, ta, ka, pataka (as fast as possible) or pa_steady"),
+      speakerGender: z.enum(["male", "female"]).optional().describe("Speaker gender, needed for the norm comparison"),
+      speakerAge: z.number().int().min(1).max(120).optional().describe("Speaker age in years, needed for the norm comparison (norms cover 65 to 86)"),
+    },
+    ANALYSIS_TOOL,
+    async ({ audioPath: path, task, speakerGender, speakerAge }) => {
+      try {
+        const fileId = await client.uploadFileId(path);
+        const params: Record<string, string> = { fileId, task };
+        if (speakerGender) params.gender = speakerGender;
+        if (speakerAge !== undefined) params.age = String(speakerAge);
+        return ok(await client.get("/api/measure-ddk", params));
+      } catch (e) { return translateError(e); }
+    },
+  ).update({ outputSchema: GENERIC_OUTPUT_SCHEMA });
 }

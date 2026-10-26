@@ -73,6 +73,7 @@ See [ChatGPT setup and release checks](docs/chatgpt-api.md) for the matching pla
 | `vocametrix_calculate_h1_h2` | H1–H2 harmonic difference |
 | `vocametrix_calculate_abi` | Acoustic Breathiness Index |
 | `vocametrix_calculate_voice_dynamics` | Dynamic range and fundamental frequency statistics |
+| `vocametrix_measure_ddk` | Diadochokinesis (pa-ta-ka): syllable rate, regularity, acceleration, Pierce 2013 norms for 65-86 |
 
 ### Ingestion utilities
 | Tool | Description |
